@@ -11,6 +11,8 @@ import random
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
+MAX_ERRORS = 10
+
 app = dash.Dash(
     __name__,
     external_stylesheets=external_stylesheets,
@@ -67,6 +69,7 @@ app.layout = html.Div([
             html.H3('Loss'),
             html.Button(id='btn-update', n_clicks=0, children='Another one'),
             html.Button(id='btn-update-errors', n_clicks=0, children='Render errors'),
+            html.Button(id='btn-clear-annotations', n_clicks=0, children='Clear Annotations'),
             dcc.Graph(
                 id='graph_loss',
                 figure={
@@ -99,14 +102,6 @@ app.layout = html.Div([
 
 # ---------- Helper Functions for Rendering ---------- #
 
-def render_error_messages(errors_data):
-    result_divs = []
-    for i, error in enumerate(errors_data):
-        result_divs.append(render_error_message('error-msg-{}'.format(i), error))
-
-    return result_divs
-
-
 def render_error_message(id, error_message):
     return html.Div([
         html.H3(error_message['title']),
@@ -120,11 +115,15 @@ def render_error_message(id, error_message):
 
 @app.callback(
     Output('annotations-cache', 'data'),
-    [Input('error-msg-{}'.format(i), 'n_clicks_timestamp') for i in range(len(mock_error_msgs))],
+    [Input('error-msg-{}'.format(i), 'n_clicks_timestamp') for i in range(MAX_ERRORS)] + \
+            [Input('btn-clear-annotations', 'n_clicks_timestamp')],
 )
 def highlight_graph_for_error(*click_timestamps):
+    '''change the annotations state based on clicked error msg'''
     click_timestamps = [i or 0 for i in click_timestamps]
     clicked_idx = argmax(click_timestamps)
+    if clicked_idx == len(click_timestamps) - 1:  # pressed the clear annotations button
+        return []
     annotations = mock_error_msgs[clicked_idx]['annotations']
     return annotations
             
@@ -141,15 +140,12 @@ def update_metrics_data(clicks, metrics_data):
     elif clicks == 0:
         return mock_data  # here we have a default value instead of nuthin
 
-    if 'selected' in metrics_data:
-        del metrics_data['selected']
+    for k in metrics_data['loss'].keys():
+        metrics_data['loss'][k][0].append(metrics_data['loss'][k][0][-1] + 1)
+        metrics_data['loss'][k][1].append(max(metrics_data['loss'][k][1][-1] * 0.91 + (random.random() - 0.6), 0))
 
-    for k in metrics_data.keys():
-        metrics_data[k][0].append(metrics_data[k][0][-1] + 1)
-        metrics_data[k][1].append(metrics_data[k][1][-1] * 0.91 + (random.random() - 0.6))
-
-    if clicks % 2 == 0:
-        metrics_data['selected'] = [4, 6]
+        metrics_data['acc'][k][0].append(metrics_data['acc'][k][0][-1] + 1)
+        metrics_data['acc'][k][1].append(min(metrics_data['acc'][k][1][-1] * 1.01 + (random.random() * 2), 100))
 
     return metrics_data
 
@@ -164,8 +160,9 @@ def update_errors_data(clicks, errors_data):
     if clicks is None:
         raise PreventUpdate
 
+    #TODO make this actually depend on errors_data
     if clicks > 0:
-        return mock_error_msgs
+        return mock_error_msgs[:clicks]
     return []
 
 
@@ -173,10 +170,18 @@ def update_errors_data(clicks, errors_data):
     Output('errors-list', 'children'),
     [Input('errors-cache', 'data')],
 )
-def update_errors_list(errors_cache):
-    if len(errors_cache) == 0:
+def update_errors_list(errors_data):
+    if len(errors_data) == 0:
         return 'No errors, yay!'
-    return render_error_messages(errors_cache)
+
+    result_divs = []
+    for i, error in enumerate(errors_data):
+        result_divs.append(render_error_message('error-msg-{}'.format(i), error))
+
+    for i in range(len(result_divs), MAX_ERRORS):
+        result_divs.append(html.Div(id='error-msg-{}'.format(i), style={'display': 'none'}))
+
+    return result_divs
 
 
 @app.callback(
