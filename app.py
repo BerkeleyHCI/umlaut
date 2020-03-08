@@ -1,14 +1,24 @@
+# -*- coding: utf-8 -*-
+
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
+from dash.exceptions import PreventUpdate
 
 import json
 import random
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app = dash.Dash(
+    __name__,
+    external_stylesheets=external_stylesheets,
+    suppress_callback_exceptions=True,  # must have this for dynamic callbacks
+)
+
+def argmax(l):
+    return max(range(len(l)), key=lambda i: l[i])
 
 # ----------- Mock Data ---------- #
 
@@ -30,34 +40,17 @@ mock_error_msgs = [
 ```py
 [f'element {e} number {i}' for i, e in enumerate(range(10)) if valid(e)]
 ```''',
+        'annotations': [2, 3],  # right now this will just annotate all plots
     }, {
-        'epoch': 4,
+        'epoch': 5,
         'title': 'This is another error message.',
         'description': 'it works, lol.',
+        'annotations': [4, 5],
     },
 ]
 
-# ---------- Helper Functions for Rendering ---------- #
-
-
-def render_error_messages(errors_data):
-    result_divs = []
-    for i, error in enumerate(errors_data):
-        result_divs.append(render_error_message('error-msg-{}'.format(i), error))
-    return result_divs
-
-
-def render_error_message(id, error_message):
-    return html.Div([
-        html.H3(error_message['title']),
-        dcc.Markdown(error_message['description']),
-        html.Small('Captured at epoch {}.'.format(error_message['epoch'])),
-        html.Hr(),
-    ], id=id, style={'display': 'inline-block'})
-
 
 # ----------- App Layout ---------- #
-
 
 app.layout = html.Div([
     html.Div([
@@ -67,6 +60,7 @@ app.layout = html.Div([
     html.Div([
             html.H3('Loss'),
             html.Button(id='btn-update', n_clicks=0, children='Another one'),
+            html.Button(id='btn-update-errors', n_clicks=0, children='Render errors'),
             dcc.Graph(
                 id='graph_loss',
                 figure={
@@ -87,70 +81,139 @@ app.layout = html.Div([
     html.Div([
             html.H2('Error Messages'),
             html.Hr(),
-            html.Div(
-                render_error_messages(mock_error_msgs),
-                id='errors-list',
-            ),
+            html.Div(id='errors-list'),
         ],
         className='six columns',
     ),
-    html.Div(id='cache', style={'display': 'none'}, children=json.dumps(mock_data)),
+    dcc.Store(id='metrics-cache', storage_type='memory'),
+    dcc.Store(id='errors-cache', storage_type='memory'),
+    dcc.Store(id='annotations-cache', storage_type='memory'),
 ])
+
+
+# ---------- Helper Functions for Rendering ---------- #
+
+def render_error_messages(errors_data):
+    result_divs = []
+    for i, error in enumerate(errors_data):
+        result_divs.append(render_error_message('error-msg-{}'.format(i), error))
+
+    return result_divs
+
+
+def render_error_message(id, error_message):
+    return html.Div([
+        html.H3(error_message['title']),
+        dcc.Markdown(error_message['description']),
+        html.Small('Captured at epoch {}.'.format(error_message['epoch'])),
+        html.Hr(),
+    ], id=id, style={'display': 'inline-block'}, key=id)
 
 
 # ---------- App Callbacks ---------- #
 
 @app.callback(
-    Output('cache', 'children'),
-    [Input('btn-update', 'n_clicks')],
-    [State('cache', 'children')],
+    Output('annotations-cache', 'data'),
+    [Input('error-msg-{}'.format(i), 'n_clicks_timestamp') for i in range(len(mock_error_msgs))],
 )
-def update_mock_data(clicks, mock_data_json):
-    mock_data = json.loads(mock_data_json)
-    for k in mock_data.keys():
-        mock_data[k][0].append(mock_data[k][0][-1] + 1)
-        mock_data[k][1].append(mock_data[k][1][-1] * 0.91 + (random.random() - 0.6))
-    return json.dumps(mock_data)
+def highlight_graph_for_error(*click_timestamps):
+    click_timestamps = [i or 0 for i in click_timestamps]
+    clicked_idx = argmax(click_timestamps)
+    annotations = mock_error_msgs[clicked_idx]['annotations']
+    return annotations
+            
+
+@app.callback(
+    Output('metrics-cache', 'data'),
+    [Input('btn-update', 'n_clicks')],
+    [State('metrics-cache', 'data')],
+)
+def update_metrics_data(clicks, metrics_data):
+    '''handle updates to the metrics data'''
+    if clicks is None:
+        raise PreventUpdate
+    elif clicks == 0:
+        return mock_data  # here we have a default value instead of nuthin
+
+    if 'selected' in metrics_data:
+        del metrics_data['selected']
+
+    for k in metrics_data.keys():
+        metrics_data[k][0].append(metrics_data[k][0][-1] + 1)
+        metrics_data[k][1].append(metrics_data[k][1][-1] * 0.91 + (random.random() - 0.6))
+
+    if clicks % 2 == 0:
+        metrics_data['selected'] = [4, 6]
+
+    return metrics_data
+
+
+@app.callback(
+    Output('errors-cache', 'data'),
+    [Input('btn-update-errors', 'n_clicks')],
+    [State('errors-cache', 'data')],
+)
+def update_errors_data(clicks, errors_data):
+    '''handle updates to the error message data'''
+    if clicks is None:
+        raise PreventUpdate
+
+    if clicks > 0:
+        return mock_error_msgs
+    return []
+
+@app.callback(
+    Output('errors-list', 'children'),
+    [Input('errors-cache', 'data')],
+)
+def update_errors_list(errors_cache):
+    if len(errors_cache) == 0:
+        return 'No errors, yay!'
+    return render_error_messages(errors_cache)
 
 
 @app.callback(
     Output('graph_loss', 'figure'),
-    [Input('cache', 'children'),],
+    [Input('metrics-cache', 'data'), Input('annotations-cache', 'data')],
 )
-def update_loss(mock_data_json):
-    mock_data = json.loads(mock_data_json)
-    return {
-        'layout': {
-            'title': 'Loss over epochs',
-            'shapes': [{
-                'type': 'rect',
-                'xref': 'x',
-                'yref': 'paper',
-                'x0': 3, # x0, x1 are epoch bounds
-                'x1': 5,
-                'y0': 0,
-                'y1': 1,
-                'fillcolor': 'LightSalmon',
-                'opacity': 0.5,
-                'layer': 'below',
-                'line_width': 0,
-            }],
-        },
-        'data': [
-            {
-                'x': mock_data['train'][0],
-                'y': mock_data['train'][1],
-                'name': 'train_200203',
-                'type': 'line+marker',
+def update_loss(metrics_data, annotations_data):
+    graph_figure = {
+            'layout': {
+                'title': 'Loss over epochs',
             },
-            {
-                'x': mock_data['val'][0],
-                'y': mock_data['val'][1],
-                'name': 'val_200203',
-                'type': 'line+marker',
-            },
-        ],
-    }
+            'data': [
+                {
+                    'x': metrics_data['train'][0],
+                    'y': metrics_data['train'][1],
+                    'name': 'train_200203',
+                    'type': 'line+marker',
+                },
+                {
+                    'x': metrics_data['val'][0],
+                    'y': metrics_data['val'][1],
+                    'name': 'val_200203',
+                    'type': 'line+marker',
+                },
+            ],
+        }
+
+    if annotations_data:
+        annotation_shape = {
+            'type': 'rect',
+            'xref': 'x',
+            'yref': 'paper',
+            'x0': annotations_data[0], # x0, x1 are epoch bounds
+            'x1': annotations_data[1],
+            'y0': 0,
+            'y1': 1,
+            'fillcolor': 'LightSalmon',
+            'opacity': 0.5,
+            'layer': 'below',
+            'line_width': 0,
+        }
+        graph_figure['layout']['shapes'] = [annotation_shape]
+
+    return graph_figure
 
 
 if __name__ == '__main__':
