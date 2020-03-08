@@ -23,8 +23,14 @@ def argmax(l):
 # ----------- Mock Data ---------- #
 
 mock_data = {
-    'train': [[0, 1, 2, 3, 4, 5], [12.6, 4.39, 1.1, 0.56, 0.48, 0.44]],
-    'val': [[0, 1, 2, 3, 4, 5], [12.6, 6.39, 3.1, 1.56, 1.48, 0.9]],
+    'loss': {
+        'train': [[0, 1, 2, 3, 4, 5], [12.6, 4.39, 1.1, 0.56, 0.48, 0.44]],
+        'val': [[0, 1, 2, 3, 4, 5], [12.6, 6.39, 3.1, 1.56, 1.48, 0.9]],
+    },
+    'acc': {
+        'train': [[0, 1, 2, 3, 4, 5], [10.6, 30.39, 51.1, 60.56, 65.48, 70.44]],
+        'val': [[0, 1, 2, 3, 4, 5], [12.6, 26.39, 43.1, 41.56, 45.48, 46.9]],
+    }
 }
 
 mock_error_msgs = [
@@ -162,6 +168,7 @@ def update_errors_data(clicks, errors_data):
         return mock_error_msgs
     return []
 
+
 @app.callback(
     Output('errors-list', 'children'),
     [Input('errors-cache', 'data')],
@@ -183,14 +190,14 @@ def update_loss(metrics_data, annotations_data):
             },
             'data': [
                 {
-                    'x': metrics_data['train'][0],
-                    'y': metrics_data['train'][1],
+                    'x': metrics_data['loss']['train'][0],
+                    'y': metrics_data['loss']['train'][1],
                     'name': 'train_200203',
                     'type': 'line+marker',
                 },
                 {
-                    'x': metrics_data['val'][0],
-                    'y': metrics_data['val'][1],
+                    'x': metrics_data['loss']['val'][0],
+                    'y': metrics_data['loss']['val'][1],
                     'name': 'val_200203',
                     'type': 'line+marker',
                 },
@@ -215,6 +222,49 @@ def update_loss(metrics_data, annotations_data):
 
     return graph_figure
 
+
+@app.callback(
+    Output('graph_acc', 'figure'),
+    [Input('metrics-cache', 'data'), Input('annotations-cache', 'data')],
+)
+def update_loss(metrics_data, annotations_data):
+    graph_figure = {
+            'layout': {
+                'title': 'Accuracy over epochs',
+            },
+            'data': [
+                {
+                    'x': metrics_data['acc']['train'][0],
+                    'y': metrics_data['acc']['train'][1],
+                    'name': 'train_200203',
+                    'type': 'line+marker',
+                },
+                {
+                    'x': metrics_data['acc']['val'][0],
+                    'y': metrics_data['acc']['val'][1],
+                    'name': 'val_200203',
+                    'type': 'line+marker',
+                },
+            ],
+        }
+
+    if annotations_data:
+        annotation_shape = {
+            'type': 'rect',
+            'xref': 'x',
+            'yref': 'paper',
+            'x0': annotations_data[0], # x0, x1 are epoch bounds
+            'x1': annotations_data[1],
+            'y0': 0,
+            'y1': 1,
+            'fillcolor': 'LightSalmon',
+            'opacity': 0.5,
+            'layer': 'below',
+            'line_width': 0,
+        }
+        graph_figure['layout']['shapes'] = [annotation_shape]
+
+    return graph_figure
 
 if __name__ == '__main__':
     app.run_server(debug=True)
