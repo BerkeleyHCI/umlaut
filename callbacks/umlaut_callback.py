@@ -9,7 +9,6 @@ class UmlautCallback(tf.keras.callbacks.Callback):
     self.input_node = tf.Variable(0., validate_shape=False)
     self.output_node = tf.Variable(0., validate_shape=False)
     self.register_model(model)
-    K.get_session().run(tf.global_variables_initializer())
 
   def on_batch_end(self, batch, logs=None):
     send_obj = {k: float(v) for k, v in logs.items()}
@@ -37,4 +36,5 @@ class UmlautCallback(tf.keras.callbacks.Callback):
     model.call = types.MethodType(new_call, model)
   
   def send_data_to_server(self, data):
+    print("Debug: Sending Data: ", data)
     pass
