@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import dash
+import json
+import random
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
+from bson import ObjectId
 
-import json
-import random
+from models import db
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -23,6 +25,7 @@ def argmax(l):
     return max(range(len(l)), key=lambda i: l[i])
 
 # ----------- Mock Data ---------- #
+
 
 mock_data = {
     'loss': {
@@ -138,7 +141,26 @@ def update_metrics_data(clicks, metrics_data):
     if clicks is None:
         raise PreventUpdate
     elif clicks == 0:
-        return mock_data  # here we have a default value instead of nuthin
+        session_data_loss = db.plots.find_one({'session_id': ObjectId('5e8be9a283d409a2560de721'), 'name': 'loss'})
+        session_data_acc = db.plots.find_one({'session_id': ObjectId('5e8be9a283d409a2560de721'), 'name': 'acc'})
+
+        train_loss = list(zip(*[(d['epoch'], d['value']) for d in session_data_loss['train']]))
+        val_loss = list(zip(*[(d['epoch'], d['value']) for d in session_data_loss['val']]))
+        train_acc = list(zip(*[(d['epoch'], d['value']) for d in session_data_acc['train']]))
+        val_acc = list(zip(*[(d['epoch'], d['value']) for d in session_data_acc['val']]))
+        #return mock_data  # here we have a default value instead of nuthin
+        data = {  # for now, keep the same format as before... we don't have to
+            'loss': {
+                'train': train_loss,
+                'val': val_loss,
+            },
+            'acc': {
+                'train': train_acc,
+                'val': val_acc,
+            },
+        }
+        return data
+
 
     for k in metrics_data['loss'].keys():
         metrics_data['loss'][k][0].append(metrics_data['loss'][k][0][-1] + 1)
@@ -272,5 +294,5 @@ def update_loss(metrics_data, annotations_data):
     return graph_figure
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(host='0.0.0.0', port=8888, debug=True)
 
