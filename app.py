@@ -119,15 +119,18 @@ def render_error_message(id, error_message):
 @app.callback(
     Output('annotations-cache', 'data'),
     [Input('error-msg-{}'.format(i), 'n_clicks_timestamp') for i in range(MAX_ERRORS)] + \
-            [Input('btn-clear-annotations', 'n_clicks_timestamp')],
+            [Input('btn-clear-annotations', 'n_clicks_timestamp'),
+             Input('errors-cache', 'data')],
 )
 def highlight_graph_for_error(*click_timestamps):
     '''change the annotations state based on clicked error msg'''
+    len_clicks = len(click_timestamps)
+    click_timestamps, error_msgs = click_timestamps[:len_clicks-1], click_timestamps[-1]
     click_timestamps = [i or 0 for i in click_timestamps]
     clicked_idx = argmax(click_timestamps)
     if clicked_idx == len(click_timestamps) - 1:  # pressed the clear annotations button
         return []
-    annotations = mock_error_msgs[clicked_idx]['annotations']
+    annotations = error_msgs[clicked_idx]['annotations']
     return annotations
             
 
@@ -144,11 +147,11 @@ def update_metrics_data(clicks, metrics_data):
         session_data_loss = db.plots.find_one({'session_id': ObjectId('5e8be9a283d409a2560de721'), 'name': 'loss'})
         session_data_acc = db.plots.find_one({'session_id': ObjectId('5e8be9a283d409a2560de721'), 'name': 'acc'})
 
+        #TODO handle case where query is empty
         train_loss = list(zip(*[(d['epoch'], d['value']) for d in session_data_loss['train']]))
         val_loss = list(zip(*[(d['epoch'], d['value']) for d in session_data_loss['val']]))
         train_acc = list(zip(*[(d['epoch'], d['value']) for d in session_data_acc['train']]))
         val_acc = list(zip(*[(d['epoch'], d['value']) for d in session_data_acc['val']]))
-        #return mock_data  # here we have a default value instead of nuthin
         data = {  # for now, keep the same format as before... we don't have to
             'loss': {
                 'train': train_loss,
@@ -162,7 +165,7 @@ def update_metrics_data(clicks, metrics_data):
         return data
 
 
-    for k in metrics_data['loss'].keys():
+    for k in metrics_data['loss'].keys():  #TODO remove, only to simulate new data points
         metrics_data['loss'][k][0].append(metrics_data['loss'][k][0][-1] + 1)
         metrics_data['loss'][k][1].append(max(metrics_data['loss'][k][1][-1] * 0.91 + (random.random() - 0.6), 0))
 
@@ -183,9 +186,14 @@ def update_errors_data(clicks, errors_data):
         raise PreventUpdate
 
     #TODO make this actually depend on errors_data
-    if clicks > 0:
-        return mock_error_msgs[:clicks]
-    return []
+    if clicks == 0:
+        error_msgs = list(db.errors.find(
+            {'session_id': ObjectId('5e8be9a283d409a2560de721')},
+            {'_id': 0, 'session_id': 0},  # omit object ids from results, not json friendly
+        ))
+        return error_msgs
+
+    return errors_data
 
 
 @app.callback(
