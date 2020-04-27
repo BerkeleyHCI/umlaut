@@ -24,42 +24,6 @@ app = dash.Dash(
 def argmax(l):
     return max(range(len(l)), key=lambda i: l[i])
 
-# ----------- Mock Data ---------- #
-
-
-mock_data = {
-    'loss': {
-        'train': [[0, 1, 2, 3, 4, 5], [12.6, 4.39, 1.1, 0.56, 0.48, 0.44]],
-        'val': [[0, 1, 2, 3, 4, 5], [12.6, 6.39, 3.1, 1.56, 1.48, 0.9]],
-    },
-    'acc': {
-        'train': [[0, 1, 2, 3, 4, 5], [10.6, 30.39, 51.1, 60.56, 65.48, 70.44]],
-        'val': [[0, 1, 2, 3, 4, 5], [12.6, 26.39, 43.1, 41.56, 45.48, 46.9]],
-    }
-}
-
-mock_error_msgs = [
-    {
-        'epoch': 3,
-        'title': '⚠️ This demo is fake.',
-        'description': '''This demo is fake. Unfortunately what you're seeing right
-    now is a mockup of the final interface. This usually happens when you are early
-    in the design process and want to validate your decisions before committing to
-    a more significant engineering effort. You can solve this problem by writing
-    code in your editor like: 
-
-```py
-[f'element {e} number {i}' for i, e in enumerate(range(10)) if valid(e)]
-```''',
-        'annotations': [2, 3],  # right now this will just annotate all plots
-    }, {
-        'epoch': 5,
-        'title': 'This is another error message.',
-        'description': 'it works, lol.',
-        'annotations': [4, 5],
-    },
-]
-
 
 # ----------- App Layout ---------- #
 
@@ -128,7 +92,7 @@ def highlight_graph_for_error(*click_timestamps):
     click_timestamps, error_msgs = click_timestamps[:len_clicks-1], click_timestamps[-1]
     click_timestamps = [i or 0 for i in click_timestamps]
     clicked_idx = argmax(click_timestamps)
-    if clicked_idx == len(click_timestamps) - 1:  # pressed the clear annotations button
+    if clicked_idx == len(click_timestamps) - 1 or all(t is None for t in click_timestamps):  # pressed the clear annotations button
         return []
     annotations = error_msgs[clicked_idx]['annotations']
     return annotations
@@ -148,10 +112,10 @@ def update_metrics_data(clicks, metrics_data):
         session_data_acc = db.plots.find_one({'session_id': ObjectId('5e8be9a283d409a2560de721'), 'name': 'acc'})
 
         #TODO handle case where query is empty
-        train_loss = list(zip(*[(d['epoch'], d['value']) for d in session_data_loss['train']]))
-        val_loss = list(zip(*[(d['epoch'], d['value']) for d in session_data_loss['val']]))
-        train_acc = list(zip(*[(d['epoch'], d['value']) for d in session_data_acc['train']]))
-        val_acc = list(zip(*[(d['epoch'], d['value']) for d in session_data_acc['val']]))
+        train_loss = list(zip(*session_data_loss['train']))
+        val_loss = list(zip(*session_data_loss['val']))
+        train_acc = list(zip(*session_data_acc['train']))
+        val_acc = list(zip(*session_data_acc['val']))
         data = {  # for now, keep the same format as before... we don't have to
             'loss': {
                 'train': train_loss,
