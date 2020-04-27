@@ -59,6 +59,7 @@ def argmax(l):
 # ----------- App Layout ---------- #
 
 app.layout = html.Div([
+    dcc.Location(id='url', refresh=False),
     html.Div([
         html.H1('Umlaut Toolkit'),
         html.Hr(),
@@ -131,16 +132,21 @@ def highlight_graph_for_error(*click_timestamps):
 
 @app.callback(
     Output('metrics-cache', 'data'),
-    [Input('btn-update', 'n_clicks')],
+    [Input('btn-update', 'n_clicks'), Input('url', 'pathname')],
     [State('metrics-cache', 'data')],
 )
-def update_metrics_data(clicks, metrics_data):
+def update_metrics_data(clicks, pathname, metrics_data):
     '''handle updates to the metrics data'''
-    if clicks is None:
+    if clicks is None or pathname is None:
         raise PreventUpdate
     elif clicks == 0:
-        session_data_loss = db.plots.find_one({'session_id': ObjectId('5e8be9a283d409a2560de721'), 'name': 'loss'})
-        session_data_acc = db.plots.find_one({'session_id': ObjectId('5e8be9a283d409a2560de721'), 'name': 'acc'})
+        path = pathname.split('/')
+        if 'session' not in path:
+            sess_id = '5e8be9a283d409a2560de721'  # default test session
+        else:
+            sess_id = path[path.index('session') + 1]
+        session_data_loss = db.plots.find_one({'session_id': ObjectId(sess_id), 'name': 'loss'})
+        session_data_acc = db.plots.find_one({'session_id': ObjectId(sess_id), 'name': 'acc'})
 
         #TODO handle case where query is empty
         train_loss = list(zip(*session_data_loss['train']))
@@ -172,18 +178,24 @@ def update_metrics_data(clicks, metrics_data):
 
 @app.callback(
     Output('errors-cache', 'data'),
-    [Input('btn-update-errors', 'n_clicks')],
+    [Input('btn-update-errors', 'n_clicks'), Input('url', 'pathname')],
     [State('errors-cache', 'data')],
 )
-def update_errors_data(clicks, errors_data):
+def update_errors_data(clicks, pathname, errors_data):
     '''handle updates to the error message data'''
-    if clicks is None:
+    if clicks is None or pathname is None:
         raise PreventUpdate
 
     #TODO make this actually depend on errors_data
     if clicks == 0:
+        path = pathname.split('/')
+        if 'session' not in path:
+            sess_id = '5e8be9a283d409a2560de721'  # default test session
+        else:
+            sess_id = path[path.index('session') + 1]
+
         error_msgs = list(db.errors.find(
-            {'session_id': ObjectId('5e8be9a283d409a2560de721')},
+            {'session_id': ObjectId(sess_id)},
             {'_id': 0, 'session_id': 0},  # omit object ids from results, not json friendly
         ))
         return error_msgs
