@@ -56,18 +56,31 @@ def argmax(l):
     return max(range(len(l)), key=lambda i: l[i])
 
 
+def get_training_sessions():
+    sessions = []
+    for sess in db.sessions.find():
+        sessions.append({
+            'label': sess['name'],
+            'value': str(sess['_id']),
+        })
+    return sessions
+
+
 # ----------- App Layout ---------- #
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
+    dcc.Location(id='url-update', refresh=False),
     html.Div([
         html.H1('Umlaut Toolkit'),
+        dcc.Dropdown(
+            id='session-picker',
+            options=get_training_sessions(),
+        ),
         html.Hr(),
     ]),
     html.Div([
             html.H3('Loss'),
-            html.Button(id='btn-update', n_clicks=0, children='Another one'),
-            html.Button(id='btn-update-errors', n_clicks=0, children='Render errors'),
             html.Button(id='btn-clear-annotations', n_clicks=0, children='Clear Annotations'),
             dcc.Graph(
                 id='graph_loss',
@@ -93,6 +106,11 @@ app.layout = html.Div([
         ],
         className='six columns',
     ),
+    dcc.Interval(
+	id='interval-component',
+	interval=10*1000, # in milliseconds
+	n_intervals=0,
+    ),
     dcc.Store(id='metrics-cache', storage_type='memory'),
     dcc.Store(id='errors-cache', storage_type='memory'),
     dcc.Store(id='annotations-cache', storage_type='memory'),
@@ -111,6 +129,30 @@ def render_error_message(id, error_message):
 
 
 # ---------- App Callbacks ---------- #
+
+@app.callback(
+    Output('session-picker', 'value'),
+    [Input('url-update', 'pathname')],
+)
+def update_dropdown_from_url(pathname):
+    '''set the dropdown value from a different url object
+
+    Yes I know this is awful, but it works. This will make
+    pages load from URL alone, populating the dropdown with
+    a default value.
+    '''
+    path = pathname.split('/')
+    sess_id = path[path.index('session') + 1]  # fetch session from URL: /session/session_id
+    return sess_id
+
+@app.callback(
+    Output('url', 'pathname'),
+    [Input('session-picker', 'value')]
+)
+def change_url(ses):
+    '''update URL based on session picked in dropdown'''
+    return f'/session/{ObjectId(ses)}'
+
 
 @app.callback(
     Output('annotations-cache', 'data'),
@@ -132,67 +174,39 @@ def highlight_graph_for_error(*click_timestamps):
 
 @app.callback(
     Output('metrics-cache', 'data'),
-    [Input('btn-update', 'n_clicks'), Input('url', 'pathname')],
+    [Input('interval-component', 'n_intervals'), Input('url', 'pathname')],
     [State('metrics-cache', 'data')],
 )
-def update_metrics_data(clicks, pathname, metrics_data):
+def update_metrics_data(intervals, pathname, metrics_data):
     '''handle updates to the metrics data'''
-    if clicks is None or pathname is None:
+    if intervals is None or pathname is None:
         raise PreventUpdate
-    elif clicks == 0:
-        path = pathname.split('/')
-        if 'session' not in path:
-            sess_id = '5e8be9a283d409a2560de721'  # default test session
-        else:
-            sess_id = path[path.index('session') + 1]
-        session_data_loss = db.plots.find_one({'session_id': ObjectId(sess_id), 'name': 'loss'})
-        session_data_acc = db.plots.find_one({'session_id': ObjectId(sess_id), 'name': 'acc'})
 
-        #TODO handle case where query is empty
-        train_loss = list(zip(*session_data_loss['train']))
-        val_loss = list(zip(*session_data_loss['val']))
-        train_acc = list(zip(*session_data_acc['train']))
-        val_acc = list(zip(*session_data_acc['val']))
-        data = {  # for now, keep the same format as before... we don't have to
-            'loss': {
-                'train': train_loss,
-                'val': val_loss,
-            },
-            'acc': {
-                'train': train_acc,
-                'val': val_acc,
-            },
-        }
-        return data
+    path = pathname.split('/')
+    sess_id = path[path.index('session') + 1]  # fetch session from URL: /session/session_id
+    session_plots = [s for s in db.plots.find({'session_id': ObjectId(sess_id)})]
 
+    go_data = {}
+    for plot in session_plots:
+        go_data[plot['name']] = {k: list(zip(*plot['streams'][k])) for k in plot['streams']}
 
-    for k in metrics_data['loss'].keys():  #TODO remove, only to simulate new data points
-        metrics_data['loss'][k][0].append(metrics_data['loss'][k][0][-1] + 1)
-        metrics_data['loss'][k][1].append(max(metrics_data['loss'][k][1][-1] * 0.91 + (random.random() - 0.6), 0))
-
-        metrics_data['acc'][k][0].append(metrics_data['acc'][k][0][-1] + 1)
-        metrics_data['acc'][k][1].append(min(metrics_data['acc'][k][1][-1] * 1.01 + (random.random() * 2), 100))
-
-    return metrics_data
+    return go_data
 
 
 @app.callback(
     Output('errors-cache', 'data'),
-    [Input('btn-update-errors', 'n_clicks'), Input('url', 'pathname')],
+    [Input('interval-component', 'n_intervals'), Input('url', 'pathname')],
     [State('errors-cache', 'data')],
 )
-def update_errors_data(clicks, pathname, errors_data):
+def update_errors_data(interval, pathname, errors_data):
     '''handle updates to the error message data'''
-    if clicks is None or pathname is None:
+    if interval is None or pathname is None:
         raise PreventUpdate
 
     #TODO make this actually depend on errors_data
-    if clicks == 0:
+    if interval == 0:
         path = pathname.split('/')
-        if 'session' not in path:
-            sess_id = '5e8be9a283d409a2560de721'  # default test session
-        else:
-            sess_id = path[path.index('session') + 1]
+        sess_id = path[path.index('session') + 1]
 
         error_msgs = list(db.errors.find(
             {'session_id': ObjectId(sess_id)},
@@ -208,10 +222,14 @@ def update_errors_data(clicks, pathname, errors_data):
     [Input('errors-cache', 'data')],
 )
 def update_errors_list(errors_data):
-    if len(errors_data) == 0:
-        return 'No errors, yay!'
-
     result_divs = []
+    
+    if not errors_data:
+        return html.p('No errors found for this session.')
+
+    if len(errors_data) == 0:
+        result_divs.append(html.p('No errors yay!'))
+
     for i, error in enumerate(errors_data):
         result_divs.append(render_error_message('error-msg-{}'.format(i), error))
 
@@ -226,25 +244,29 @@ def update_errors_list(errors_data):
     [Input('metrics-cache', 'data'), Input('annotations-cache', 'data')],
 )
 def update_loss(metrics_data, annotations_data):
+    #TODO fix situation where query is empty
+    if not metrics_data:
+        return {}
+
     graph_figure = {
-            'layout': {
-                'title': 'Loss over epochs',
+        'layout': {
+            'title': 'Loss over epochs',
+        },
+        'data': [
+            {
+                'x': metrics_data['loss']['train'][0],
+                'y': metrics_data['loss']['train'][1],
+                'name': 'train_200203',
+                'type': 'line+marker',
             },
-            'data': [
-                {
-                    'x': metrics_data['loss']['train'][0],
-                    'y': metrics_data['loss']['train'][1],
-                    'name': 'train_200203',
-                    'type': 'line+marker',
-                },
-                {
-                    'x': metrics_data['loss']['val'][0],
-                    'y': metrics_data['loss']['val'][1],
-                    'name': 'val_200203',
-                    'type': 'line+marker',
-                },
-            ],
-        }
+            {
+                'x': metrics_data['loss']['val'][0],
+                'y': metrics_data['loss']['val'][1],
+                'name': 'val_200203',
+                'type': 'line+marker',
+            },
+        ],
+    }
 
     if annotations_data:
         annotation_shape = {
