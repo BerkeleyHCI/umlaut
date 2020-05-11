@@ -80,7 +80,7 @@ app.layout = html.Div([
         html.Hr(),
     ]),
     html.Div([
-            html.H3('Loss'),
+            html.H3('Visualizations'),
             html.Button(id='btn-clear-annotations', n_clicks=0, children='Clear Annotations'),
             dcc.Graph(
                 id='graph_loss',
@@ -100,7 +100,7 @@ app.layout = html.Div([
         className='five columns',
     ),
     html.Div([
-            html.H2('Error Messages'),
+            html.H3('Error Messages'),
             html.Hr(),
             html.Div(id='errors-list'),
         ],
@@ -125,7 +125,7 @@ def render_error_message(id, error_message):
         dcc.Markdown(error_message['description']),
         html.Small('Captured at epoch {}.'.format(error_message['epoch'])),
         html.Hr(),
-    ], id=id, style={'display': 'inline-block'}, key=id)
+    ], id=id, style={'cursor': 'pointer', 'display': 'inline-block'}, key=id)
 
 
 # ---------- App Callbacks ---------- #
@@ -141,9 +141,11 @@ def update_dropdown_from_url(pathname):
     pages load from URL alone, populating the dropdown with
     a default value.
     '''
-    path = pathname.split('/')
-    sess_id = path[path.index('session') + 1]  # fetch session from URL: /session/session_id
-    return sess_id
+    if pathname and 'session' in pathname:
+        path = pathname.split('/')
+        sess_id = path[path.index('session') + 1]  # fetch session from URL: /session/session_id
+        return sess_id
+    return pathname
 
 @app.callback(
     Output('url', 'pathname'),
@@ -151,6 +153,8 @@ def update_dropdown_from_url(pathname):
 )
 def change_url(ses):
     '''update URL based on session picked in dropdown'''
+    if ses is '/':
+        raise PreventUpdate
     return f'/session/{ObjectId(ses)}'
 
 
@@ -182,12 +186,15 @@ def update_metrics_data(intervals, pathname, metrics_data):
     if intervals is None or pathname is None:
         raise PreventUpdate
 
+    if pathname == '/':
+        return {}
     path = pathname.split('/')
     sess_id = path[path.index('session') + 1]  # fetch session from URL: /session/session_id
     session_plots = [s for s in db.plots.find({'session_id': ObjectId(sess_id)})]
 
     go_data = {}
     for plot in session_plots:
+        # this one liner unzips each stream from [[x, y], ...] to [[x, ...], [y, ...]]
         go_data[plot['name']] = {k: list(zip(*plot['streams'][k])) for k in plot['streams']}
 
     return go_data
@@ -225,7 +232,7 @@ def update_errors_list(errors_data):
     result_divs = []
     
     if not errors_data:
-        return html.p('No errors found for this session.')
+        return html.P('No errors found for this session.')
 
     if len(errors_data) == 0:
         result_divs.append(html.p('No errors yay!'))
