@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import bson
 import dash
 import json
 import random
@@ -8,64 +9,16 @@ import dash_html_components as html
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 from bson import ObjectId
+from flask import abort
 from flask import request
 
-from models import db
-
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+from umlaut import app
+from umlaut.helpers import argmax
+from umlaut.models import db
 
 MAX_ERRORS = 10
 
-app = dash.Dash(
-    __name__,
-    external_stylesheets=external_stylesheets,
-    suppress_callback_exceptions=True,  # must have this for dynamic callbacks
-)
-
-# ----------- Flask API routes ---------- #
-
-# get the internal flask object for client facing API
-server = app.server
-
-@server.route('/api/updateSessionPlots/<sess_id>', methods=['POST'])
-def update_session_plots(sess_id):
-    try:
-        sess_id = ObjectId(sess_id)
-    except bson.errors.InvalidId:
-        abort(400)
-    if db.sessions.find_one(sess_id) is None:
-        abort(404)  # session not found
-
-    updates = request.get_json()
-    update_plots = updates.keys()
-    for plot_name in update_plots:  # loss, acc
-        for plot_col in updates[plot_name]:  # train, val
-            update_data = updates[plot_name][plot_col]
-            assert len(list(update_data)) == 2  # [epoch, data]
-            db.plots.update(
-                {'session_id': sess_id, 'name': plot_name},
-                {'$push': {plot_col: update_data}},
-            )
-            print(f'epoch {update_data[0]}: {plot_name}.{plot_col} <-+ {update_data[1]}')
-    return 'done!'
-
-
-# ----------- Helpers ---------- #
-
-def argmax(l):
-    return max(range(len(l)), key=lambda i: l[i])
-
-
-def get_training_sessions():
-    '''query mongodb for all sessions'''
-    sessions = []
-    for sess in db.sessions.find():
-        sessions.append({
-            'label': sess['name'],
-            'value': str(sess['_id']),
-        })
-    return sessions
-
+# ---------- Helper Functions for Rendering ---------- #
 
 def get_go_data_from_metrics(plot, metrics_data):
     '''populate graph_figure.data from metrics_data'''
@@ -79,58 +32,21 @@ def get_go_data_from_metrics(plot, metrics_data):
     ]
 
 
-# ----------- App Layout ---------- #
+def make_annotation_box_shape(xbounds):
+    return {
+        'type': 'rect',
+        'xref': 'x',
+        'yref': 'paper',
+        'x0': xbounds[0], # x0, x1 are epoch bounds
+        'x1': xbounds[1],
+        'y0': 0,
+        'y1': 1,
+        'fillcolor': 'LightPink',
+        'opacity': 0.5,
+        'layer': 'below',
+        'line_width': 0,
+    }
 
-app.layout = html.Div([
-    dcc.Location(id='url', refresh=False),
-    dcc.Location(id='url-update', refresh=False),
-    html.Div([
-        html.H1('Umlaut Toolkit'),
-        dcc.Dropdown(
-            id='session-picker',
-            options=get_training_sessions(),
-        ),
-        html.Hr(),
-    ]),
-    html.Div([
-            html.H3('Visualizations'),
-            html.Button(id='btn-clear-annotations', n_clicks=0, children='Clear Annotations'),
-            dcc.Graph(
-                id='graph_loss',
-                figure={
-                    'layout': {'title': 'Loss over Epochs'},
-                },
-            ),
-            dcc.Graph(
-                id='graph_acc',
-                figure={
-                    'layout': {
-                        'title': 'Accuracy over Epochs',
-                    },
-                },
-            ),
-        ],
-        className='five columns',
-    ),
-    html.Div([
-            html.H3('Error Messages'),
-            html.Hr(),
-            html.Div(id='errors-list'),
-        ],
-        className='six columns',
-    ),
-    dcc.Interval(
-	id='interval-component',
-	interval=10*1000, # in milliseconds
-	n_intervals=0,
-    ),
-    dcc.Store(id='metrics-cache', storage_type='memory'),
-    dcc.Store(id='errors-cache', storage_type='memory'),
-    dcc.Store(id='annotations-cache', storage_type='memory'),
-])
-
-
-# ---------- Helper Functions for Rendering ---------- #
 
 def render_error_message(id, error_message):
     return html.Div([
@@ -160,6 +76,7 @@ def update_dropdown_from_url(pathname):
         return sess_id
     return pathname
 
+
 @app.callback(
     Output('url', 'pathname'),
     [Input('session-picker', 'value')]
@@ -168,6 +85,7 @@ def change_url(ses):
     '''update URL based on session picked in dropdown'''
     if ses is '/':
         raise PreventUpdate
+    # don't catch invalidId, let it error out
     return f'/session/{ObjectId(ses)}'
 
 
@@ -206,7 +124,10 @@ def update_metrics_data(intervals, pathname, metrics_data):
         return {}
     path = pathname.split('/')
     sess_id = path[path.index('session') + 1]  # fetch session from URL: /session/session_id
-    session_plots = [s for s in db.plots.find({'session_id': ObjectId(sess_id)})]
+    try:
+        session_plots = [s for s in db.plots.find({'session_id': ObjectId(sess_id)})]
+    except bson.errors.InvalidId:
+        return {}
 
     go_data = {}
     for plot in session_plots:
@@ -226,15 +147,16 @@ def update_errors_data(interval, pathname, errors_data):
     if interval is None or pathname is None:
         raise PreventUpdate
 
-    #TODO make this actually depend on errors_data
     if interval == 0:
         path = pathname.split('/')
         sess_id = path[path.index('session') + 1]
-
-        error_msgs = list(db.errors.find(
-            {'session_id': ObjectId(sess_id)},
-            {'_id': 0, 'session_id': 0},  # omit object ids from results, not json friendly
-        ))
+        try:
+            error_msgs = list(db.errors.find(
+                {'session_id': ObjectId(sess_id)},
+                {'_id': 0, 'session_id': 0},  # omit object ids from results, not json friendly
+            ))
+        except bson.errors.InvalidId:
+            abort(400)
         return error_msgs
 
     return errors_data
@@ -251,7 +173,7 @@ def update_errors_list(errors_data):
         return html.P('No errors found for this session.')
 
     if len(errors_data) == 0:
-        result_divs.append(html.p('No errors yay!'))
+        result_divs.append(html.P('No errors yay!'))
 
     for i, error in enumerate(errors_data):
         result_divs.append(render_error_message('error-msg-{}'.format(i), error))
@@ -278,20 +200,7 @@ def update_loss(metrics_data, annotations_data):
     }
 
     if annotations_data:
-        annotation_shape = {
-            'type': 'rect',
-            'xref': 'x',
-            'yref': 'paper',
-            'x0': annotations_data[0], # x0, x1 are epoch bounds
-            'x1': annotations_data[1],
-            'y0': 0,
-            'y1': 1,
-            'fillcolor': 'LightPink',
-            'opacity': 0.5,
-            'layer': 'below',
-            'line_width': 0,
-        }
-        graph_figure['layout']['shapes'] = [annotation_shape]
+        graph_figure['layout']['shapes'] = [make_annotation_box_shape(annotations_data)]
 
     return graph_figure
 
@@ -311,20 +220,7 @@ def update_acc(metrics_data, annotations_data):
         }
 
     if annotations_data:
-        annotation_shape = {
-            'type': 'rect',
-            'xref': 'x',
-            'yref': 'paper',
-            'x0': annotations_data[0], # x0, x1 are epoch bounds
-            'x1': annotations_data[1],
-            'y0': 0,
-            'y1': 1,
-            'fillcolor': 'LightPink',
-            'opacity': 0.5,
-            'layer': 'below',
-            'line_width': 0,
-        }
-        graph_figure['layout']['shapes'] = [annotation_shape]
+        graph_figure['layout']['shapes'] = [make_annotation_box_shape(annotations_data)]
 
     return graph_figure
 
