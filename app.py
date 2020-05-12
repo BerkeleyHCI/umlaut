@@ -57,6 +57,7 @@ def argmax(l):
 
 
 def get_training_sessions():
+    '''query mongodb for all sessions'''
     sessions = []
     for sess in db.sessions.find():
         sessions.append({
@@ -64,6 +65,18 @@ def get_training_sessions():
             'value': str(sess['_id']),
         })
     return sessions
+
+
+def get_go_data_from_metrics(plot, metrics_data):
+    '''populate graph_figure.data from metrics_data'''
+    return [  # make a plot for every plot stream
+        {
+            'x': metrics_data[plot][k][0],
+            'y': metrics_data[plot][k][1],
+            'name': k,
+            'type': 'line+marker',
+        } for k in metrics_data[plot]
+    ]
 
 
 # ----------- App Layout ---------- #
@@ -169,10 +182,13 @@ def highlight_graph_for_error(*click_timestamps):
     len_clicks = len(click_timestamps)
     click_timestamps, error_msgs = click_timestamps[:len_clicks-1], click_timestamps[-1]
     click_timestamps = [i or 0 for i in click_timestamps]
+    # args now initialized
+    if sum(click_timestamps) == 0:  # application reset or nothing clicked
+        raise PreventUpdate
     clicked_idx = argmax(click_timestamps)
-    if clicked_idx == len(click_timestamps) - 1 or all(t is None for t in click_timestamps):  # pressed the clear annotations button
+    if clicked_idx == len(click_timestamps) - 1:  # pressed the clear annotations button
         return []
-    annotations = error_msgs[clicked_idx]['annotations']
+    annotations = error_msgs[clicked_idx]['annotations']  #TODO change to object, requires schema change
     return annotations
             
 
@@ -251,7 +267,6 @@ def update_errors_list(errors_data):
     [Input('metrics-cache', 'data'), Input('annotations-cache', 'data')],
 )
 def update_loss(metrics_data, annotations_data):
-    #TODO fix situation where query is empty
     if not metrics_data:
         return {}
 
@@ -259,20 +274,7 @@ def update_loss(metrics_data, annotations_data):
         'layout': {
             'title': 'Loss over epochs',
         },
-        'data': [
-            {
-                'x': metrics_data['loss']['train'][0],
-                'y': metrics_data['loss']['train'][1],
-                'name': 'train_200203',
-                'type': 'line+marker',
-            },
-            {
-                'x': metrics_data['loss']['val'][0],
-                'y': metrics_data['loss']['val'][1],
-                'name': 'val_200203',
-                'type': 'line+marker',
-            },
-        ],
+        'data': get_go_data_from_metrics('loss', metrics_data),
     }
 
     if annotations_data:
@@ -284,7 +286,7 @@ def update_loss(metrics_data, annotations_data):
             'x1': annotations_data[1],
             'y0': 0,
             'y1': 1,
-            'fillcolor': 'LightSalmon',
+            'fillcolor': 'LightPink',
             'opacity': 0.5,
             'layer': 'below',
             'line_width': 0,
@@ -298,25 +300,14 @@ def update_loss(metrics_data, annotations_data):
     Output('graph_acc', 'figure'),
     [Input('metrics-cache', 'data'), Input('annotations-cache', 'data')],
 )
-def update_loss(metrics_data, annotations_data):
+def update_acc(metrics_data, annotations_data):
+    if not metrics_data:
+        return {}
     graph_figure = {
             'layout': {
                 'title': 'Accuracy over epochs',
             },
-            'data': [
-                {
-                    'x': metrics_data['acc']['train'][0],
-                    'y': metrics_data['acc']['train'][1],
-                    'name': 'train_200203',
-                    'type': 'line+marker',
-                },
-                {
-                    'x': metrics_data['acc']['val'][0],
-                    'y': metrics_data['acc']['val'][1],
-                    'name': 'val_200203',
-                    'type': 'line+marker',
-                },
-            ],
+            'data': get_go_data_from_metrics('acc', metrics_data),
         }
 
     if annotations_data:
@@ -328,7 +319,7 @@ def update_loss(metrics_data, annotations_data):
             'x1': annotations_data[1],
             'y0': 0,
             'y1': 1,
-            'fillcolor': 'LightSalmon',
+            'fillcolor': 'LightPink',
             'opacity': 0.5,
             'layer': 'below',
             'line_width': 0,
