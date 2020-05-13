@@ -12,9 +12,9 @@ from bson import ObjectId
 from flask import abort
 from flask import request
 
-from umlaut import app
-from umlaut.helpers import argmax
-from umlaut.models import db
+from umserver import app
+from umserver.helpers import argmax
+from umserver.models import db
 
 MAX_ERRORS = 10
 

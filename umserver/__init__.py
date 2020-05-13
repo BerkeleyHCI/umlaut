@@ -12,9 +12,9 @@ app = dash.Dash(
 )
 
 # import API routes
-from umlaut import api
-from umlaut import layout
-from umlaut import callbacks
+from umserver import api
+from umserver import layout
+from umserver import callbacks
 
 # expose internal flask object for serving
 server = app.server

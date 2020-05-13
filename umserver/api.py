@@ -5,8 +5,8 @@ from bson import ObjectId
 from flask import abort
 from flask import request
 
-from umlaut import app
-from umlaut.models import db
+from umserver import app
+from umserver.models import db
 
 # get the internal flask object for client facing API
 server = app.server

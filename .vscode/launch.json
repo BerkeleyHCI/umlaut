@@ -10,7 +10,7 @@
             "request": "launch",
             "module": "flask",
             "env": {
-                "FLASK_APP": "umlaut:server",
+                "FLASK_APP": "umserver:server",
                 "FLASK_ENV": "development",
                 "FLASK_DEBUG": "1"
             },

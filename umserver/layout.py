@@ -3,8 +3,8 @@
 import dash_core_components as dcc
 import dash_html_components as html
 
-from umlaut import app
-from umlaut.models import get_training_sessions
+from umserver import app
+from umserver.models import get_training_sessions
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
