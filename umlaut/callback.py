@@ -18,24 +18,21 @@ class UmlautCallback(tf.keras.callbacks.Callback):
         self.register_model(model)
         self.umlaut_client = UmlautClient(session_name, host)
 
-    def on_train_batch_end(self, batch, logs=None):
+    def on_epoch_end(self, batch, logs=None):
         send_obj = {k: float(v) for k, v in logs.items()}
         # send_obj['input_example'] = K.eval(self.input_node)[0].tolist()
         # send_obj['output_example'] = K.eval(self.output_node)[0].tolist()
 
         self.umlaut_client.send_batch_metrics({
-            'loss': {'train': [batch, float(logs['loss'])]},
-            'acc': {'train': [batch, float(logs['acc'])]},
+            'loss': {
+                'train': [batch, float(logs['loss'])],
+                'val': [batch, float(logs['val_loss'])],
+            },
+            'acc': {
+                'train': [batch, float(logs['acc'])],
+                'val': [batch, float(logs['val_acc'])],
+            },
         })
-        print()
-        print(logs)
-
-    def on_test_batch_end(self, batch, logs=None):
-        self.umlaut_client.send_batch_metrics({
-            'loss': {'val': [batch, float(logs['loss'])]},
-            'acc': {'val': [batch, float(logs['acc'])]},
-        })
-        print()
         print(logs)
 
     def register_model(self, model):
