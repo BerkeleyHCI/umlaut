@@ -89,6 +89,9 @@ def change_url(ses):
     return f'/session/{ObjectId(ses)}'
 
 
+#TODO add a callback for session picker to be populated
+
+
 @app.callback(
     Output('annotations-cache', 'data'),
     [Input('error-msg-{}'.format(i), 'n_clicks_timestamp') for i in range(MAX_ERRORS)] + \

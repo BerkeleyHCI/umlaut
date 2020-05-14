@@ -40,7 +40,8 @@ def update_session_plots(sess_id):
             assert len(list(update_data)) == 2  # [epoch, data]
             db.plots.update(
                 {'session_id': sess_id, 'name': plot_name},
-                {'$push': {plot_col: update_data}},
+                {'$push': {'streams.' + plot_col: update_data}},
+                upsert=True,
             )
             print(f'epoch {update_data[0]}: {plot_name}.{plot_col} <-+ {update_data[1]}')
     return 'done!'
