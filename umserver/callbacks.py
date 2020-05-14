@@ -15,6 +15,7 @@ from flask import request
 from umserver import app
 from umserver.helpers import argmax
 from umserver.models import db
+from umserver.models import get_training_sessions
 
 MAX_ERRORS = 10
 
@@ -78,6 +79,16 @@ def update_dropdown_from_url(pathname):
 
 
 @app.callback(
+    Output('session-picker', 'options'),
+    [Input('url-update', 'pathname')],
+)
+def update_dropdown_options(pathname):
+    '''populate session picker from db on page load.
+    '''
+    return get_training_sessions()
+
+
+@app.callback(
     Output('url', 'pathname'),
     [Input('session-picker', 'value')]
 )
@@ -87,9 +98,6 @@ def change_url(ses):
         raise PreventUpdate
     # don't catch invalidId, let it error out
     return f'/session/{ObjectId(ses)}'
-
-
-#TODO add a callback for session picker to be populated
 
 
 @app.callback(
