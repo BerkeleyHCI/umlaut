@@ -2,16 +2,16 @@ import requests
 from bson import ObjectId
 from datetime import datetime as dt
 from pymongo import MongoClient
+from pymongo import ReturnDocument
 
-client = MongoClient('localhost', 27017)
-db = client['umlaut']
 
 class UmlautClient:
     def __init__(self, session_name=None, host=None):
         # set up host for umlaut server
-        self.host = host or 'localhost:8888'
-        if not self.host.startswith('http://'):
-            self.host = 'http://' + self.host
+        self.host = host or 'localhost'
+
+        client = MongoClient(host, 27017)
+        self.db = client['umlaut']
 
         # get session id from database, whether existing or new
         if not session_name:
@@ -29,26 +29,22 @@ class UmlautClient:
         }
         '''
         r = requests.post(
-            self.host + f'/api/updateSessionPlots/{self.session_id}',
+            f'http://{self.host}:5000/api/updateSessionPlots/{self.session_id}',
             json=req_data,
         )
         r.raise_for_status()
 
 
-    @staticmethod
-    def get_sessionid_str_from_name(session_name):
+    def get_sessionid_str_from_name(self, session_name):
         '''Find a session named session_name, otherwise make it.
         '''
-        ses = db.sessions.find_one_and_update(
+        ses = self.db.sessions.find_one_and_update(
             {'name': session_name},
             {'$set': {
                 'name': session_name,
-                'modify_timestamp': dt.isoformat(),
+                'modify_timestamp': dt.now().isoformat(),
             }},
             upsert=True,
+            return_document=ReturnDocument.AFTER,
         )
         return str(ses['_id'])  # return string from ObjectId
-
-
-def update_col_parameters():
-    pass

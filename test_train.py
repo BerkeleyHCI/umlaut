@@ -15,9 +15,19 @@ model.add(tf.keras.layers.Dense(10))
 cb = UmlautCallback(
     model,
     session_name='test_update_metrics',
+    host='localhost',
 )
 
-model.compile(optimizer='adam',
-              loss=tf.keras.losses.sparse_categorical_crossentropy,
-              metrics=['accuracy'])
-model.fit(train_images, train_labels, epochs=10, callbacks=[cb])
+model.compile(
+    optimizer='adam',
+    loss=tf.keras.losses.sparse_categorical_crossentropy,
+    metrics=['accuracy'],
+)
+
+model.fit(
+    train_images,
+    train_labels,
+    epochs=5,
+    callbacks=[cb],
+    validation_split=0.2,  # add validation for val metrics
+)

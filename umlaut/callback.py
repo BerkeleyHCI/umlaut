@@ -13,8 +13,8 @@ class UmlautCallback(tf.keras.callbacks.Callback):
         self.host = host
         if not self.host.startswith('http'):
             self.host = 'http://' + self.host
-        self.input_node = tf.Variable(0., validate_shape=False)
-        self.output_node = tf.Variable(0., validate_shape=False)
+        self.input_node = tf.Variable(0., dtype=tf.float32, validate_shape=False)
+        self.output_node = tf.Variable(0., dtype=tf.float32, validate_shape=False)
         self.register_model(model)
         self.umlaut_client = UmlautClient(session_name, host)
 
@@ -24,14 +24,19 @@ class UmlautCallback(tf.keras.callbacks.Callback):
         # send_obj['output_example'] = K.eval(self.output_node)[0].tolist()
 
         self.umlaut_client.send_batch_metrics({
-            'loss': {'train': [batch, logs['loss']]},
+            'loss': {'train': [batch, float(logs['loss'])]},
+            'acc': {'train': [batch, float(logs['acc'])]},
         })
-        self.send_data_to_server(json.dumps(send_obj))
+        print()
+        print(logs)
 
     def on_test_batch_end(self, batch, logs=None):
         self.umlaut_client.send_batch_metrics({
-            'loss': {'val': [batch, logs['loss']]}
+            'loss': {'val': [batch, float(logs['loss'])]},
+            'acc': {'val': [batch, float(logs['acc'])]},
         })
+        print()
+        print(logs)
 
     def register_model(self, model):
         if not isinstance(model, tf.keras.models.Model):
@@ -43,15 +48,11 @@ class UmlautCallback(tf.keras.callbacks.Callback):
         outer_output_node = self.output_node
 
         def new_call(self, x, *args, **kwargs):
-            x = tf.assign(outer_input_node, x, validate_shape=False)
-            x = current_call(x, *args, **kwargs)
-            assign_op = tf.assign(outer_output_node, x, validate_shape=False)
+            x = tf.assign(outer_input_node, tf.cast(x, tf.float32), validate_shape=False)
+            out = current_call(x, *args, **kwargs)
+            assign_op = tf.assign(outer_output_node, tf.cast(out, tf.float32), validate_shape=False)
             with tf.control_dependencies([assign_op]):
-                x = tf.identity(x)
-            return x
+                out = tf.identity(out)
+            return out
 
         model.call = types.MethodType(new_call, model)
-
-    def send_data_to_server(self, data):
-        print("Debug: Sending Data: ", data)
-        pass
