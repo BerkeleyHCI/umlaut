@@ -62,19 +62,6 @@ class UmlautCallback(tf.keras.callbacks.Callback):
 
         current_call = model.call
 
-        if tf.__version__.startswith('1'):
-            def new_call(wrap_instance, x, *args, **kwargs):
-                input_assign = tf.assign(self.input_node, tf.cast(x, K.floatx()), validate_shape=False)
-                with tf.control_dependencies([input_assign]):
-                    out = current_call(x, *args, **kwargs)
-                output_assign = tf.assign(self.output_node, tf.cast(out, K.floatx()), validate_shape=False)
-                with tf.control_dependencies([output_assign]):
-                    out = tf.identity(out)
-                return out
-            
-            model.call = types.MethodType(new_call, model)
-            return
-
         def new_call(wrap_instance, x, *args, **kwargs):  # self here is the model, not the callback
             input_assign = self.input_node.assign(tf.cast(x, K.floatx()))
             with tf.control_dependencies([input_assign]):
@@ -83,5 +70,21 @@ class UmlautCallback(tf.keras.callbacks.Callback):
             with tf.control_dependencies([output_assign]):
                 out = tf.identity(out)
             return out
+
+        if tf.__version__.startswith('1'):
+            def v1_compat_call(wrap_instance, x, *args, **kwargs):
+                input_assign = tf.assign(self.input_node, tf.cast(x, K.floatx()), validate_shape=False)
+                with tf.control_dependencies([input_assign]):
+                    out = current_call(x, *args, **kwargs)
+                output_assign = tf.assign(self.output_node, tf.cast(out, K.floatx()), validate_shape=False)
+                with tf.control_dependencies([output_assign]):
+                    out = tf.identity(out)
+                return out
+
+            new_call = v1_compat_call
+            
+            model.call = types.MethodType(new_call, model)
+            return
+
 
         model.call = types.MethodType(new_call, model)
