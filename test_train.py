@@ -15,13 +15,11 @@ model.add(tf.keras.layers.Flatten())
 model.add(tf.keras.layers.Dense(128, activation='relu'))
 model.add(tf.keras.layers.Dense(10))
 
-# Also works with subclass of tf.keras.models.Model
-# model = TestModel() 
-
 cb = UmlautCallback(
     model,
     session_name='test_update_metrics_epoch',
     host='localhost',
+    offline=True,
 )
 
 model.compile(
@@ -31,9 +29,9 @@ model.compile(
 )
 
 model.fit(
-    train_images / 256.,
-    train_labels / 256.,
-    epochs=10,
+    train_images,
+    train_labels,
+    epochs=3,
     callbacks=[cb],
     validation_split=0.2,  # add validation for val metrics
 )
