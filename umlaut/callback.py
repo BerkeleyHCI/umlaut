@@ -51,8 +51,8 @@ class UmlautCallback(tf.keras.callbacks.Callback):
                 },
             })
         print(logs)
-        print(self.input_node)
-        print(self.output_node)
+        # print(self.input_node)
+        # print(self.output_node)
 
     def register_model(self, model):
         if not isinstance(model, tf.keras.models.Model):
