@@ -10,6 +10,8 @@ from umlaut.client import UmlautClient
 class UmlautCallback(tf.keras.callbacks.Callback):
     def __init__(self, model, session_name=None, host=None, offline=False):
 
+        self.tf_version = int(tf.__version__[0])  # 1 or 2
+
         # set up model shim
         self.model = model
         self.input_node = tf.Variable(
@@ -35,24 +37,20 @@ class UmlautCallback(tf.keras.callbacks.Callback):
             self.umlaut_client = UmlautClient(session_name, host)
 
     def on_epoch_end(self, batch, logs=None):
-        # send_obj = {k: float(v) for k, v in logs.items()}
-        # send_obj['input_example'] = K.eval(self.input_node)[0].tolist()
-        # send_obj['output_example'] = K.eval(self.output_node)[0].tolist()
-
         if self.umlaut_client:
             self.umlaut_client.send_batch_metrics({
                 'loss': {
                     'train': [batch, float(logs['loss'])],
                     'val': [batch, float(logs['val_loss'])],
                 },
-                'acc': {
-                    'train': [batch, float(logs['acc'])],
-                    'val': [batch, float(logs['val_acc'])],
+                'acc': {  # try 'accuracy' for tf2, fall back on 'acc' for tf1 else raise
+                    'train': [batch, float(logs['accuracy'] if self.tf_version == 2 else logs['acc'])],
+                    'val': [batch, float(logs['val_accuracy'] if self.tf_version == 2 else logs['val_acc'])],
                 },
             })
         print(logs)
-        # print(self.input_node)
-        # print(self.output_node)
+        # print(K.eval(self.input_node))  # backwards and forwards compatible
+        # print(K.eval(self.output_node))
 
     def register_model(self, model):
         if not isinstance(model, tf.keras.models.Model):

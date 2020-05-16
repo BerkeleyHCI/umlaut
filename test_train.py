@@ -14,7 +14,7 @@ model = tf.keras.Sequential([
 
 cb = UmlautCallback(
     model,
-    session_name='test_update_metrics_epoch',
+    session_name='test_update_metrics_shim',
     host='localhost',
     offline=True,
 )
