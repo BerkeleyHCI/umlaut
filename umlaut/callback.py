@@ -5,6 +5,7 @@ import types
 import json
 
 from umlaut.client import UmlautClient
+from umlaut.heuristics import run_heuristics
 
 
 class UmlautCallback(tf.keras.callbacks.Callback):
@@ -49,7 +50,13 @@ class UmlautCallback(tf.keras.callbacks.Callback):
                 },
             })
         print(logs)
-        # print(K.eval(self.input_node))  # backwards and forwards compatible
+        print('Running Umlaut checks...')
+        model_input = K.eval(self.input_node)
+        errors = run_heuristics(batch, model_input)
+        if errors:
+            print(errors)
+            self.umlaut_client.send_errors(errors)
+
         # print(K.eval(self.output_node))
 
     def register_model(self, model):

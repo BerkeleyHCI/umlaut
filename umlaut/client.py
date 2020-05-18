@@ -35,6 +35,25 @@ class UmlautClient:
         r.raise_for_status()
 
 
+    #TODO make this an API call instead
+    def send_errors(self, errors):
+        '''send and format an error message (for now)'''
+        for error in errors:
+            self.db.errors.find_one_and_update(
+                {'error_id_str': error.id_str, 'epoch': error.epoch},
+                {'$set': {
+                    'session_id': ObjectId(self.session_id),
+                    'error_id_str': error.id_str,
+                    'epoch': error.epoch,
+                    'annotations': error.annotations,
+                    'title': error.title,
+                    'description': error.description,
+                }},
+                upsert=True,
+            )
+
+
+    #TODO make this an API call instead
     def get_sessionid_str_from_name(self, session_name):
         '''Find a session named session_name, otherwise make it.
         '''
