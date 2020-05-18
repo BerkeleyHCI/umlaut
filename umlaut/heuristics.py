@@ -11,7 +11,7 @@ def check_input_normalization(epoch, x_train, bounds=(-1, 1)):
     '''
     x_min = np.min(x_train)
     x_max = np.max(x_train)
-    error = False
+    remark = ''
     if x_min < bounds[0]:
         remark = remark + f'x_min is {x_min}, less than {bounds[0]}. '
     if x_max > bounds[1]:
