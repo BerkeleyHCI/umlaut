@@ -158,17 +158,18 @@ def update_errors_data(interval, pathname, errors_data):
     if interval is None or pathname is None:
         raise PreventUpdate
 
-    if interval == 0:
-        path = pathname.split('/')
-        sess_id = path[path.index('session') + 1]
-        try:
-            error_msgs = list(db.errors.find(
-                {'session_id': ObjectId(sess_id)},
-                {'_id': 0, 'session_id': 0},  # omit object ids from results, not json friendly
-            ))
-        except bson.errors.InvalidId:
-            abort(400)
-        return error_msgs
+    if pathname == '/':
+        return {}
+
+    path = pathname.split('/')
+    sess_id = path[path.index('session') + 1]
+    try:
+        errors_data = list(db.errors.find(
+            {'session_id': ObjectId(sess_id)},
+            {'_id': 0, 'session_id': 0},  # omit object ids from results, not json friendly
+        ).sort([('epoch', -1)]))  # sort by epoch descending (latest first)
+    except bson.errors.InvalidId:
+        abort(400)
 
     return errors_data
 
