@@ -13,7 +13,6 @@ app.layout = html.Div([
         html.H1('Umlaut Toolkit'),
         dcc.Dropdown(
             id='session-picker',
-            options=get_training_sessions(),
         ),
         html.Hr(),
     ]),
@@ -29,9 +28,7 @@ app.layout = html.Div([
             dcc.Graph(
                 id='graph_acc',
                 figure={
-                    'layout': {
-                        'title': 'Accuracy over Epochs',
-                    },
+                    'layout': {'title': 'Accuracy over Epochs'},
                 },
             ),
         ],

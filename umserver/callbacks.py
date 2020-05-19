@@ -21,6 +21,7 @@ MAX_ERRORS = 10
 
 # ---------- Helper Functions for Rendering ---------- #
 
+
 def get_go_data_from_metrics(plot, metrics_data):
     '''populate graph_figure.data from metrics_data'''
     return [  # make a plot for every plot stream
@@ -38,7 +39,7 @@ def make_annotation_box_shape(xbounds):
         'type': 'rect',
         'xref': 'x',
         'yref': 'paper',
-        'x0': xbounds[0], # x0, x1 are epoch bounds
+        'x0': xbounds[0],  # x0, x1 are epoch bounds
         'x1': xbounds[1],
         'y0': 0,
         'y1': 1,
@@ -73,7 +74,8 @@ def update_dropdown_from_url(pathname):
     '''
     if pathname and 'session' in pathname:
         path = pathname.split('/')
-        sess_id = path[path.index('session') + 1]  # fetch session from URL: /session/session_id
+        # fetch session from URL: /session/session_id
+        sess_id = path[path.index('session') + 1]
         return sess_id
     return pathname
 
@@ -102,24 +104,23 @@ def change_url(ses):
 
 @app.callback(
     Output('annotations-cache', 'data'),
-    [Input('error-msg-{}'.format(i), 'n_clicks_timestamp') for i in range(MAX_ERRORS)] + \
-            [Input('btn-clear-annotations', 'n_clicks_timestamp'),
-             Input('errors-cache', 'data')],
+    [Input('errors-cache', 'data')] +
+    [Input('error-msg-{}'.format(i), 'n_clicks') for i in range(MAX_ERRORS)] +
+    [Input('btn-clear-annotations', 'n_clicks')],
 )
-def highlight_graph_for_error(*click_timestamps):
-    '''change the annotations state based on clicked error msg'''
-    len_clicks = len(click_timestamps)
-    click_timestamps, error_msgs = click_timestamps[:len_clicks-1], click_timestamps[-1]
-    click_timestamps = [i or 0 for i in click_timestamps]
-    # args now initialized
-    if sum(click_timestamps) == 0:  # application reset or nothing clicked
+def highlight_graph_for_error(error_msgs, *_):
+    if not dash.callback_context.triggered:
         raise PreventUpdate
-    clicked_idx = argmax(click_timestamps)
-    if clicked_idx == len(click_timestamps) - 1:  # pressed the clear annotations button
+    trigger = dash.callback_context.triggered[0]
+    trigger_id = trigger['prop_id'].split('.')[0]
+    trigger_idx = int(trigger_id[10:])  # error-msg-<int>
+    if not trigger['value']:
+        raise PreventUpdate
+    if trigger == 'btn-clear-annotations':
         return []
-    annotations = error_msgs[clicked_idx]['annotations']  #TODO change to object, requires schema change
-    return annotations
-            
+    return error_msgs[trigger_idx]['annotations']
+    
+
 
 @app.callback(
     Output('metrics-cache', 'data'),
@@ -134,16 +135,20 @@ def update_metrics_data(intervals, pathname, metrics_data):
     if pathname == '/':
         return {}
     path = pathname.split('/')
-    sess_id = path[path.index('session') + 1]  # fetch session from URL: /session/session_id
+    # fetch session from URL: /session/session_id
+    sess_id = path[path.index('session') + 1]
     try:
-        session_plots = [s for s in db.plots.find({'session_id': ObjectId(sess_id)})]
+        session_plots = [s for s in db.plots.find(
+            {'session_id': ObjectId(sess_id)})]
     except bson.errors.InvalidId:
         return {}
 
     go_data = {}
     for plot in session_plots:
         # this one liner unzips each stream from [[x, y], ...] to [[x, ...], [y, ...]]
-        go_data[plot['name']] = {k: list(zip(*plot['streams'][k])) for k in plot['streams']}
+        go_data[plot['name']] = {
+            k: list(zip(*plot['streams'][k])) for k in plot['streams']
+        }
 
     return go_data
 
@@ -166,7 +171,8 @@ def update_errors_data(interval, pathname, errors_data):
     try:
         errors_data = list(db.errors.find(
             {'session_id': ObjectId(sess_id)},
-            {'_id': 0, 'session_id': 0},  # omit object ids from results, not json friendly
+            # omit object ids from results, not json friendly
+            {'_id': 0, 'session_id': 0},
         ).sort([('epoch', -1)]))  # sort by epoch descending (latest first)
     except bson.errors.InvalidId:
         abort(400)
@@ -180,7 +186,7 @@ def update_errors_data(interval, pathname, errors_data):
 )
 def update_errors_list(errors_data):
     result_divs = []
-    
+
     if not errors_data:
         return html.P('No errors found for this session.')
 
@@ -188,10 +194,14 @@ def update_errors_list(errors_data):
         result_divs.append(html.P('No errors yay!'))
 
     for i, error in enumerate(errors_data):
-        result_divs.append(render_error_message('error-msg-{}'.format(i), error))
+        result_divs.append(render_error_message(
+            'error-msg-{}'.format(i), error)
+        )
 
     for i in range(len(result_divs), MAX_ERRORS):
-        result_divs.append(html.Div(id='error-msg-{}'.format(i), style={'display': 'none'}))
+        result_divs.append(
+            html.Div(id='error-msg-{}'.format(i), style={'display': 'none'})
+        )
 
     return result_divs
 
@@ -212,7 +222,9 @@ def update_loss(metrics_data, annotations_data):
     }
 
     if annotations_data:
-        graph_figure['layout']['shapes'] = [make_annotation_box_shape(annotations_data)]
+        graph_figure['layout']['shapes'] = [
+            make_annotation_box_shape(annotations_data)
+        ]
 
     return graph_figure
 
@@ -225,17 +237,19 @@ def update_acc(metrics_data, annotations_data):
     if not metrics_data:
         return {}
     graph_figure = {
-            'layout': {
-                'title': 'Accuracy over epochs',
-            },
-            'data': get_go_data_from_metrics('acc', metrics_data),
-        }
+        'layout': {
+            'title': 'Accuracy over epochs',
+        },
+        'data': get_go_data_from_metrics('acc', metrics_data),
+    }
 
     if annotations_data:
-        graph_figure['layout']['shapes'] = [make_annotation_box_shape(annotations_data)]
+        graph_figure['layout']['shapes'] = [
+            make_annotation_box_shape(annotations_data)
+        ]
 
     return graph_figure
 
+
 if __name__ == '__main__':
     app.run_server(host='0.0.0.0', port=8888, debug=True)
-
