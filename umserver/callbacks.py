@@ -34,13 +34,13 @@ def get_go_data_from_metrics(plot, metrics_data):
     ]
 
 
-def make_annotation_box_shape(xbounds):
+def make_annotation_box_shape(annotation):
     return {
         'type': 'rect',
         'xref': 'x',
         'yref': 'paper',
-        'x0': xbounds[0],  # x0, x1 are epoch bounds
-        'x1': xbounds[1],
+        'x0': annotation['start'],  # x0, x1 are epoch bounds
+        'x1': annotation['end'],
         'y0': 0,
         'y1': 1,
         'fillcolor': 'LightPink',
@@ -113,13 +113,18 @@ def highlight_graph_for_error(error_msgs, *_):
         raise PreventUpdate
     trigger = dash.callback_context.triggered[0]
     trigger_id = trigger['prop_id'].split('.')[0]
-    trigger_idx = int(trigger_id[10:])  # error-msg-<int>
-    if not trigger['value']:
+    if not trigger['value'] or trigger_id == 'errors-cache':
         raise PreventUpdate
-    if trigger == 'btn-clear-annotations':
+    if trigger_id == 'btn-clear-annotations':
         return []
-    return error_msgs[trigger_idx]['annotations']
-    
+    trigger_idx = int(trigger_id[10:])  # error-msg-<int>
+    return {
+        'error-index': trigger_idx,
+        'type': 'rect',
+        'start': error_msgs[trigger_idx]['annotations'][0],
+        'end': error_msgs[trigger_idx]['annotations'][1],
+    }
+
 
 
 @app.callback(
