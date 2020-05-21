@@ -106,28 +106,20 @@ def change_url(ses):
 
 
 @app.callback(
-    Output({'type': 'error-msg', 'index': MATCH}, 'style'),
-    [Input({'type': 'error-msg', 'index': MATCH}, 'n_clicks')],
-    [State({'type': 'error-msg', 'index': MATCH}, 'style')],
+    Output({'type': 'error-msg', 'index': ALL}, 'style'),
+    [
+        Input('annotations-cache', 'data'),
+        Input('errors-cache', 'data'),
+    ],
+    [State({'type': 'error-msg', 'index': ALL}, 'style')],
 )
-def annotate_graph_and_msg_on_click(
-    error_clicks,
-    clicked_error_style,
-):
-    '''Update graph annotations and style error msg when clicked.
-    '''
-    if not error_clicks:
-        raise PreventUpdate
-
-    print('**style: ', clicked_error_style)
-
-    if clicked_error_style.pop('backgroundColor', False):
-        # error is already in annotations, let's remove it (toggle)
-        return clicked_error_style
-
-    # error not in annotations, update its style
-    clicked_error_style['backgroundColor'] = 'LightPink'
-    return clicked_error_style
+def highlight_errors_from_annotations(annotations_cache, error_styles, errors_cache):
+    for style in error_styles:
+        style.pop('backgroundColor', None)
+    if annotations_cache:
+        for annotation in annotations_cache:
+            error_styles[annotation['error-index']]['backgroundColor'] = 'LightPink'
+    return error_styles
 
 
 @app.callback(
@@ -136,9 +128,10 @@ def annotate_graph_and_msg_on_click(
         Input('errors-cache', 'data'),
         Input('btn-clear-annotations', 'n_clicks'),
         Input({'type': 'error-msg', 'index': ALL}, 'n_clicks'),
-    ]
+    ],
+    [State('annotations-cache', 'data')],
 )
-def highlight_graph_for_error(error_msgs, clear_clicks, errors_clicks):
+def highlight_graph_for_error(error_msgs, clear_clicks, errors_clicks, annotations_cache):
     '''Update annotations state when an error message
     is clicked, or if the annotations are cleared.
     '''
@@ -158,13 +151,26 @@ def highlight_graph_for_error(error_msgs, clear_clicks, errors_clicks):
 
     # trigger_id is...probably... a dict of the error-msg id
     trigger_id = eval(trigger_id)
-    trigger_idx = trigger_id['index']  # error-msg-<int>
-    return {
+    trigger_idx = trigger_id['index']  # error-msg.id.index
+
+    # if this error msg is already in annotations, pop it
+    if annotations_cache:
+        annotations_error_idx = index_of_dict(annotations_cache, 'error-index', trigger_idx)
+        if annotations_error_idx is not None:
+            annotations_cache.pop(annotations_error_idx)
+            return annotations_cache
+    else:
+        annotations_cache = []
+    
+    clicked_error_annotation = {
         'error-index': trigger_idx,
         'type': 'rect',
         'start': error_msgs[trigger_idx]['annotations'][0],
         'end': error_msgs[trigger_idx]['annotations'][1],
     }
+    annotations_cache.append(clicked_error_annotation)
+
+    return annotations_cache
 
 
 @app.callback(
@@ -264,14 +270,16 @@ def update_loss(metrics_data, annotations_data):
     graph_figure = {
         'layout': {
             'title': 'Loss over epochs',
+            'shapes': [],
         },
         'data': get_go_data_from_metrics('loss', metrics_data),
     }
 
     if annotations_data:
-        graph_figure['layout']['shapes'] = [
-            make_annotation_box_shape(annotations_data)
-        ]
+        for annotation in annotations_data:
+            graph_figure['layout']['shapes'].append(
+                make_annotation_box_shape(annotation)
+            )
 
     return graph_figure
 
@@ -286,14 +294,16 @@ def update_acc(metrics_data, annotations_data):
     graph_figure = {
         'layout': {
             'title': 'Accuracy over epochs',
+            'shapes': [],
         },
         'data': get_go_data_from_metrics('acc', metrics_data),
     }
 
     if annotations_data:
-        graph_figure['layout']['shapes'] = [
-            make_annotation_box_shape(annotations_data)
-        ]
+        for annotation in annotations_data:
+            graph_figure['layout']['shapes'].append(
+                make_annotation_box_shape(annotation)
+            )
 
     return graph_figure
 
