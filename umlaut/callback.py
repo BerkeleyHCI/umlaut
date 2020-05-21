@@ -52,9 +52,9 @@ class UmlautCallback(tf.keras.callbacks.Callback):
         print(logs)
         print('Running Umlaut checks...')
         model_input = K.eval(self.input_node)
-        errors = run_heuristics(batch, model_input)
-        if errors:
-            print(errors)
+        errors = run_heuristics(batch, self.model, model_input)
+        print(errors)
+        if errors and self.umlaut_client:
             self.umlaut_client.send_errors(errors)
 
         # print(K.eval(self.output_node))

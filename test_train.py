@@ -3,8 +3,10 @@ from test_model import TestModel
 from umlaut import UmlautCallback
 
 (train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.fashion_mnist.load_data()
-train_images = train_images / 1.0
-test_images = test_images / 1.0
+train_images = train_images
+test_images = test_images
+
+print(train_images.dtype)
 
 model = tf.keras.Sequential([
     tf.keras.layers.Flatten(),
@@ -14,9 +16,9 @@ model = tf.keras.Sequential([
 
 cb = UmlautCallback(
     model,
-    session_name='test_update_metrics_errors',
+    session_name='heuristic_test_floating',
     host='localhost',
-    # offline=True,
+    offline=True,
 )
 
 model.compile(
@@ -29,6 +31,7 @@ model.fit(
     train_images,
     train_labels,
     epochs=5,
+    batch_size=256,
     callbacks=[cb],
     validation_split=0.2,  # add validation for val metrics
 )
