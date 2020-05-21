@@ -126,7 +126,6 @@ def highlight_graph_for_error(error_msgs, *_):
     }
 
 
-
 @app.callback(
     Output('metrics-cache', 'data'),
     [Input('interval-component', 'n_intervals'), Input('url', 'pathname')],
