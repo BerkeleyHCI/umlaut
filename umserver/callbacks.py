@@ -6,18 +6,17 @@ import json
 import random
 import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Input, Output, State
+from dash.dependencies import Input, Output, State, ALL, MATCH
 from dash.exceptions import PreventUpdate
 from bson import ObjectId
 from flask import abort
 from flask import request
 
 from umserver import app
-from umserver.helpers import argmax
+from umserver.helpers import argmax, index_of_dict
 from umserver.models import db
 from umserver.models import get_training_sessions
 
-MAX_ERRORS = 10
 
 # ---------- Helper Functions for Rendering ---------- #
 
@@ -50,13 +49,17 @@ def make_annotation_box_shape(annotation):
     }
 
 
-def render_error_message(id, error_message):
-    return html.Div([
-        html.H3(error_message['title']),
-        dcc.Markdown(error_message['description']),
-        html.Small('Captured at epoch {}.'.format(error_message['epoch'])),
-        html.Hr(),
-    ], id=id, style={'cursor': 'pointer', 'display': 'inline-block'}, key=id)
+def render_error_message(id_in, error_message):
+    return html.Div(
+        [
+            html.H3(error_message['title']),
+            dcc.Markdown(error_message['description']),
+            html.Small('Captured at epoch {}.'.format(error_message['epoch'])),
+            html.Hr(),
+        ],
+        id=id_in,
+        style={'cursor': 'pointer', 'display': 'inline-block'},
+    )
 
 
 # ---------- App Callbacks ---------- #
@@ -103,28 +106,71 @@ def change_url(ses):
 
 
 @app.callback(
-    Output('annotations-cache', 'data'),
-    [Input('errors-cache', 'data')] +
-    [Input('error-msg-{}'.format(i), 'n_clicks') for i in range(MAX_ERRORS)] +
-    [Input('btn-clear-annotations', 'n_clicks')],
+    Output({'type': 'error-msg', 'index': ALL}, 'style'),
+    [
+        Input('annotations-cache', 'data'),
+        Input('errors-cache', 'data'),
+    ],
+    [State({'type': 'error-msg', 'index': ALL}, 'style')],
 )
-def highlight_graph_for_error(error_msgs, *_):
+def highlight_errors_from_annotations(annotations_cache, error_styles, errors_cache):
+    for style in error_styles:
+        style.pop('backgroundColor', None)
+    if annotations_cache:
+        for annotation in annotations_cache:
+            error_styles[annotation['error-index']]['backgroundColor'] = 'LightPink'
+    return error_styles
+
+
+@app.callback(
+    Output('annotations-cache', 'data'),
+    [
+        Input('errors-cache', 'data'),
+        Input('btn-clear-annotations', 'n_clicks'),
+        Input({'type': 'error-msg', 'index': ALL}, 'n_clicks'),
+    ],
+    [State('annotations-cache', 'data')],
+)
+def highlight_graph_for_error(error_msgs, clear_clicks, errors_clicks, annotations_cache):
+    '''Update annotations state when an error message
+    is clicked, or if the annotations are cleared.
+    '''
     if not dash.callback_context.triggered:
         raise PreventUpdate
+
+    # get the input that actually triggered this callback, and its id
     trigger = dash.callback_context.triggered[0]
     trigger_id = trigger['prop_id'].split('.')[0]
     if not trigger['value'] or trigger_id == 'errors-cache':
+        # Trigger malformed or was just a cache update
         raise PreventUpdate
+
+    # clear annotations button pressed, remove annotations
     if trigger_id == 'btn-clear-annotations':
         return []
-    trigger_idx = int(trigger_id[10:])  # error-msg-<int>
-    return {
+
+    # trigger_id is...probably... a dict of the error-msg id
+    trigger_id = eval(trigger_id)
+    trigger_idx = trigger_id['index']  # error-msg.id.index
+
+    # if this error msg is already in annotations, pop it
+    if annotations_cache:
+        annotations_error_idx = index_of_dict(annotations_cache, 'error-index', trigger_idx)
+        if annotations_error_idx is not None:
+            annotations_cache.pop(annotations_error_idx)
+            return annotations_cache
+    else:
+        annotations_cache = []
+    
+    clicked_error_annotation = {
         'error-index': trigger_idx,
         'type': 'rect',
         'start': error_msgs[trigger_idx]['annotations'][0],
         'end': error_msgs[trigger_idx]['annotations'][1],
     }
+    annotations_cache.append(clicked_error_annotation)
 
+    return annotations_cache
 
 
 @app.callback(
@@ -164,7 +210,8 @@ def update_metrics_data(intervals, pathname, metrics_data):
     [State('errors-cache', 'data')],
 )
 def update_errors_data(interval, pathname, errors_data):
-    '''handle updates to the error message data'''
+    '''Updates the errors cache by making an API call
+    '''
     if interval is None or pathname is None:
         raise PreventUpdate
 
@@ -190,6 +237,8 @@ def update_errors_data(interval, pathname, errors_data):
     [Input('errors-cache', 'data')],
 )
 def update_errors_list(errors_data):
+    '''Renders errors from errors cache changes.
+    '''
     result_divs = []
 
     if not errors_data:
@@ -200,13 +249,12 @@ def update_errors_list(errors_data):
 
     for i, error in enumerate(errors_data):
         result_divs.append(render_error_message(
-            'error-msg-{}'.format(i), error)
-        )
-
-    for i in range(len(result_divs), MAX_ERRORS):
-        result_divs.append(
-            html.Div(id='error-msg-{}'.format(i), style={'display': 'none'})
-        )
+            {
+                'type': 'error-msg',
+                'index': i,
+            },
+            error,
+        ))
 
     return result_divs
 
@@ -222,14 +270,16 @@ def update_loss(metrics_data, annotations_data):
     graph_figure = {
         'layout': {
             'title': 'Loss over epochs',
+            'shapes': [],
         },
         'data': get_go_data_from_metrics('loss', metrics_data),
     }
 
     if annotations_data:
-        graph_figure['layout']['shapes'] = [
-            make_annotation_box_shape(annotations_data)
-        ]
+        for annotation in annotations_data:
+            graph_figure['layout']['shapes'].append(
+                make_annotation_box_shape(annotation)
+            )
 
     return graph_figure
 
@@ -244,14 +294,16 @@ def update_acc(metrics_data, annotations_data):
     graph_figure = {
         'layout': {
             'title': 'Accuracy over epochs',
+            'shapes': [],
         },
         'data': get_go_data_from_metrics('acc', metrics_data),
     }
 
     if annotations_data:
-        graph_figure['layout']['shapes'] = [
-            make_annotation_box_shape(annotations_data)
-        ]
+        for annotation in annotations_data:
+            graph_figure['layout']['shapes'].append(
+                make_annotation_box_shape(annotation)
+            )
 
     return graph_figure
 

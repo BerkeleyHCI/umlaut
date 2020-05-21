@@ -18,3 +18,7 @@ from umserver import callbacks
 
 # expose internal flask object for serving
 server = app.server
+
+if __name__ == '__main__':
+    # using layout.app since app doesn't have a layout until then
+    layout.app.run_server(debug=True)
