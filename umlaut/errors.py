@@ -57,4 +57,4 @@ class NoSoftmaxActivationError(BaseErrorMessage):
                   '\nAlternatively, you can manually add a softmax layer with `tf.keras.Softmax()`.'
     def __init__(self, epoch):
         super().__init__(epoch)
-        del self.annotations  # static check, no annotations
+        self.annotations = None  # static check, no annotations
