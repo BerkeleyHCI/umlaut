@@ -68,20 +68,20 @@ class UmlautCallback(tf.keras.callbacks.Callback):
         current_call = model.call
 
         def new_call(wrap_instance, x, *args, **kwargs):  # self here is the model, not the callback
-            input_assign = self.input_node.assign(tf.cast(x, K.floatx()))
+            input_assign = self.input_node.assign(tf.cast(x, K.floatx()))  # pylint: disable=no-member
             with tf.control_dependencies([input_assign]):
                 out = current_call(x, *args, **kwargs)
-            output_assign = self.output_node.assign(tf.cast(out, K.floatx()))
+            output_assign = self.output_node.assign(tf.cast(out, K.floatx()))  # pylint: disable=no-member
             with tf.control_dependencies([output_assign]):
                 out = tf.identity(out)
             return out
 
         if tf.__version__.startswith('1'):
             def v1_compat_call(wrap_instance, x, *args, **kwargs):
-                input_assign = tf.assign(self.input_node, tf.cast(x, K.floatx()), validate_shape=False)
+                input_assign = tf.assign(self.input_node, tf.cast(x, K.floatx()), validate_shape=False)  # pylint: disable=no-member
                 with tf.control_dependencies([input_assign]):
                     out = current_call(x, *args, **kwargs)
-                output_assign = tf.assign(self.output_node, tf.cast(out, K.floatx()), validate_shape=False)
+                output_assign = tf.assign(self.output_node, tf.cast(out, K.floatx()), validate_shape=False)  # pylint: disable=no-member
                 with tf.control_dependencies([output_assign]):
                     out = tf.identity(out)
                 return out
