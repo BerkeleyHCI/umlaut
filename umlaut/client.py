@@ -38,7 +38,7 @@ class UmlautClient:
     #TODO make this an API call instead
     def send_errors(self, errors):
         '''send and format an error message (for now)'''
-        for error in errors:
+        for error in filter(None, errors):
             self.db.errors.find_one_and_update(
                 {'error_id_str': error.id_str, 'epoch': error.epoch},
                 {'$set': {

@@ -5,8 +5,7 @@ import types
 import json
 
 from umlaut.client import UmlautClient
-from umlaut.heuristics import run_heuristics
-
+from umlaut.heuristics import run_epoch_heuristics
 
 class UmlautCallback(tf.keras.callbacks.Callback):
     def __init__(self, model, session_name=None, host=None, offline=False):
@@ -37,6 +36,11 @@ class UmlautCallback(tf.keras.callbacks.Callback):
                 self.host = 'http://' + self.host
             self.umlaut_client = UmlautClient(session_name, host)
 
+
+    def on_train_begin(self, logs=None):
+        NotImplemented
+
+
     def on_epoch_end(self, batch, logs=None):
         if self.umlaut_client:
             self.umlaut_client.send_batch_metrics({
@@ -52,8 +56,8 @@ class UmlautCallback(tf.keras.callbacks.Callback):
         print(logs)
         print('Running Umlaut checks...')
         model_input = K.eval(self.input_node)
-        errors = run_heuristics(batch, self.model, model_input)
-        print(errors)
+        errors = run_epoch_heuristics(batch, self.model, logs, model_input)
+        print(list(filter(None, errors)) or 'No errors!')
         if errors and self.umlaut_client:
             self.umlaut_client.send_errors(errors)
 
