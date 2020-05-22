@@ -3,8 +3,8 @@ from test_model import TestModel
 from umlaut import UmlautCallback
 
 (train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.fashion_mnist.load_data()
-train_images = train_images
-test_images = test_images
+train_images = train_images # / 255.
+test_images = test_images # / 255.
 
 print(train_images.dtype)
 
@@ -16,13 +16,14 @@ model = tf.keras.Sequential([
 
 cb = UmlautCallback(
     model,
-    session_name='heuristic_test_floating',
+    session_name='heuristic_test_nan',
     host='localhost',
-    offline=True,
+    # offline=True,
 )
 
 model.compile(
-    optimizer='adam',
+    # optimizer='adam',
+    optimizer=tf.keras.optimizers.SGD(learning_rate=-0.01),
     loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=['accuracy'],
 )
