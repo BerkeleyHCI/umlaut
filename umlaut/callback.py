@@ -57,7 +57,7 @@ class UmlautCallback(tf.keras.callbacks.Callback):
         print('Running Umlaut checks...')
         model_input = K.eval(self.input_node)
         errors = run_epoch_heuristics(batch, self.model, logs, model_input)
-        print(errors)
+        print(list(filter(None, errors)) or 'No errors!')
         if errors and self.umlaut_client:
             self.umlaut_client.send_errors(errors)
 

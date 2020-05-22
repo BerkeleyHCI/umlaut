@@ -44,6 +44,14 @@ class InputNotFloatingError(BaseErrorMessage):
 class NaNInLossError(BaseErrorMessage):
     id_str = 'nan-loss0'
     title = 'NaN (Not a number) in loss'
-    description = 'The loss value of your model has gone to NaN (could indicate infinity). This could be caused by a learning rate that is too high.  \n' \
-                   '#### Solution:  \nYou can set your learning rate when you create your optimizer object. Typical learning rates for the Adam optimizer are between 0.00001 and 0.01.  \n' \
+    description = 'The loss value of your model has gone to NaN (could indicate infinity). This could be caused by a learning rate that is too high.' \
+                   '\n#### Solution:  \n\nYou can set your learning rate when you create your optimizer object. Typical learning rates for the Adam optimizer are between 0.00001 and 0.01.' \
                    '\nFor example, `model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001))`'
+
+
+class NoSoftmaxActivationError(BaseErrorMessage):
+    id_str = 'no-softmax'
+    title = 'Loss function expects logits, but no softmax'
+    description = 'The loss function of your model expects "logits" as inputs (summing to 1), but there is no softmax activation layer to produce logits.' \
+                  '\n#### Solution: \n\nMany Keras loss functions support built-in normalization, e.g., `tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)`, where specifying `from_logits=False` will first apply softmax to your model.' \
+                  '\nAlternatively, you can manually add a softmax layer with `tf.keras.Softmax()`.'
