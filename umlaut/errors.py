@@ -55,3 +55,6 @@ class NoSoftmaxActivationError(BaseErrorMessage):
     description = 'The loss function of your model expects "logits" as inputs (summing to 1), but there is no softmax activation layer to produce logits.' \
                   '\n#### Solution: \n\nMany Keras loss functions support built-in normalization, e.g., `tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)`, where specifying `from_logits=False` will first apply softmax to your model.' \
                   '\nAlternatively, you can manually add a softmax layer with `tf.keras.Softmax()`.'
+    def __init__(self, epoch):
+        super().__init__(epoch)
+        del self.annotations  # static check, no annotations
