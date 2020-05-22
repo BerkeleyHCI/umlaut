@@ -153,6 +153,10 @@ def highlight_graph_for_error(error_msgs, clear_clicks, errors_clicks, annotatio
     trigger_id = eval(trigger_id)
     trigger_idx = trigger_id['index']  # error-msg.id.index
 
+    if not error_msgs[trigger_idx].get('annotations', False):
+        # no annotations associated with the clicked error
+        return annotations_cache
+
     # if this error msg is already in annotations, pop it
     if annotations_cache:
         annotations_error_idx = index_of_dict(annotations_cache, 'error-index', trigger_idx)
