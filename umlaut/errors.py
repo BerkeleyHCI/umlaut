@@ -21,8 +21,8 @@ class InputNotNormalizedError(BaseErrorMessage):
     #TODO really need to handle the formatting in a more clever way
     #  could probably live on the server side and trigger the errors there.
     description = 'Your input data does not look normalized.{}' \
-                  '\n#### Solution:  \nYou should normalize the input data (setting the range X_train and X_test to be from -1 to 1) before passing them into the model. For image data (pixels ranging from 0-255), a typical way to normalize the pixel values is:  ' \
-                  '\n\n     `X_train = X_train / 128.0 - 1`'
+                  '\n#### Solution:  \nYou should normalize the input data where its values fall between the typical ranges of 0 to 1 or -1 to 1, before passing them into the model. E.g., for image data (pixels ranging from 0-255), a typical way to normalize the pixel values to the range of 0 to 1 is:  ' \
+                  '\n\n     `training_images = training_images / 255.0`'
     def __init__(self, epoch, remarks=''):
         self.epoch = epoch
         self.annotations = [epoch - 1, epoch]
@@ -51,10 +51,12 @@ class NaNInLossError(BaseErrorMessage):
 
 class NoSoftmaxActivationError(BaseErrorMessage):
     id_str = 'no-softmax'
-    title = 'Loss function expects logits, but no softmax'
-    description = 'The loss function of your model expects "logits" as inputs (summing to 1), but there is no softmax activation layer to produce logits.' \
-                  '\n#### Solution: \n\nMany Keras loss functions support built-in normalization, e.g., `tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)`, where specifying `from_logits=False` will first apply softmax to your model.' \
-                  '\nAlternatively, you can manually add a softmax layer with `tf.keras.Softmax()`.'
+    title = 'Loss function expects normalized input'
+    description = 'The loss function of your model expects a probability distribution as input (i.e., the likelihood for all the classes sums to 1), but your model is producing un-normalized outputs, called "logits". Logits can be normalized to a probability distribution with a [softmax](https://www.tensorflow.org/api_docs/python/tf/keras/layers/Softmax) layer.' \
+                  '\n#### Solution: \n\nMany Keras loss function [classes](https://www.tensorflow.org/api_docs/python/tf/keras/losses) can automatically compute softmax for you by passing in a `from_logits` flag:' \
+                  '\n\n`tf.keras.losses.<your loss function here>(from_logits=True)`' \
+                  '\n\n where specifying `from_logits=True` will tell keras to apply softmax to your model output before calculating the loss function.' \
+                  '\nAlternatively, you can manually add a softmax layer to the end of your model using `tf.keras.Softmax()`.'
     def __init__(self, epoch):
         super().__init__(epoch)
         self.annotations = None  # static check, no annotations
