@@ -8,7 +8,7 @@ from umlaut.client import UmlautClient
 from umlaut.heuristics import run_epoch_heuristics
 
 class UmlautCallback(tf.keras.callbacks.Callback):
-    def __init__(self, model, session_name=None, host=None, offline=False):
+    def __init__(self, model, session_name=None, host='localhost', offline=False):
 
         self.tf_version = int(tf.__version__[0])  # 1 or 2
 
@@ -43,16 +43,19 @@ class UmlautCallback(tf.keras.callbacks.Callback):
 
     def on_epoch_end(self, batch, logs=None):
         if self.umlaut_client:
-            self.umlaut_client.send_batch_metrics({
+            metrics_dict = {
                 'loss': {
                     'train': [batch, float(logs['loss'])],
-                    'val': [batch, float(logs['val_loss'])],
                 },
-                'acc': {  # try 'accuracy' for tf2, fall back on 'acc' for tf1 else raise
+                'acc': {
                     'train': [batch, float(logs['accuracy'] if self.tf_version == 2 else logs['acc'])],
-                    'val': [batch, float(logs['val_accuracy'] if self.tf_version == 2 else logs['val_acc'])],
-                },
-            })
+                }
+            }
+            if any(k.startswith('val') for k in logs):
+                # validation split exists
+                metrics_dict['loss']['val'] = [batch, float(logs['val_loss'])]
+                metrics_dict['acc']['val'] = [batch, float(logs['val_accuracy'] if self.tf_version == 2 else logs['val_acc'])]
+            self.umlaut_client.send_batch_metrics(metrics_dict)
         print(logs)
         print('Running Umlaut checks...')
         model_input = K.eval(self.input_node)

@@ -34,7 +34,7 @@ class InputNotNormalizedError(BaseErrorMessage):
     
 
 class InputNotFloatingError(BaseErrorMessage):
-    id_str = 'input_normalization'
+    id_str = 'input_not_floating'
     title = 'Input is not a Float type'
     description = 'Your input is not a floating type.' \
                   '\n#### Solution: \nYour input should be a floating point type (supporting decimals), rather than an integer type. This allows gradients to propogate properly to your neural net\'s weights.' \
@@ -42,7 +42,7 @@ class InputNotFloatingError(BaseErrorMessage):
 
 
 class NaNInLossError(BaseErrorMessage):
-    id_str = 'nan-loss0'
+    id_str = 'nan_loss'
     title = 'NaN (Not a number) in loss'
     description = 'The loss value of your model has gone to NaN (could indicate infinity). This could be caused by a learning rate that is too high.' \
                    '\n#### Solution:  \n\nYou can set your learning rate when you create your optimizer object. Typical learning rates for the Adam optimizer are between 0.00001 and 0.01.' \
@@ -50,7 +50,7 @@ class NaNInLossError(BaseErrorMessage):
 
 
 class NoSoftmaxActivationError(BaseErrorMessage):
-    id_str = 'no-softmax'
+    id_str = 'no_softmax'
     title = 'Loss function expects normalized input'
     description = 'The loss function of your model expects a probability distribution as input (i.e., the likelihood for all the classes sums to 1), but your model is producing un-normalized outputs, called "logits". Logits can be normalized to a probability distribution with a [softmax](https://www.tensorflow.org/api_docs/python/tf/keras/layers/Softmax) layer.' \
                   '\n#### Solution: \n\nMany Keras loss function [classes](https://www.tensorflow.org/api_docs/python/tf/keras/losses) can automatically compute softmax for you by passing in a `from_logits` flag:' \
