@@ -1,21 +1,21 @@
 import inspect
 import numpy as np
 import tensorflow as tf
-from umlaut.errors import InputNotFloatingError
-from umlaut.errors import InputNotNormalizedError
-from umlaut.errors import NaNInLossError
-from umlaut.errors import NoSoftmaxActivationError
+
+import umlaut.errors
 
 
-def run_pretrain_heuristics(model, x_train):
-    NotImplemented
+def run_pretrain_heuristics(model):
+    errors_raised = []
+    errors_raised.append(check_softmax_computed_before_loss(model))
+    return errors_raised
 
 def run_epoch_heuristics(epoch, model, logs, x_train):
     errors_raised = []
     errors_raised.append(check_input_normalization(epoch, x_train))
     errors_raised.append(check_input_is_floating(epoch, model, x_train))
-    errors_raised.append(check_nan_in_loss(epoch, logs['loss']))
-    errors_raised.append(check_softmax_computed_before_loss(epoch, model))
+    errors_raised.append(check_nan_in_loss(epoch, logs))
+    errors_raised.append(check_overfitting(epoch, model, logs))
     return errors_raised
 
 
@@ -30,7 +30,7 @@ def check_input_normalization(epoch, x_train, bounds=(-1, 1)):
     if x_max > bounds[1]:
         remark = remark + f'Model input is {x_max}, greater than the typical value of {bounds[1]}.'
     if remark:
-        return InputNotNormalizedError(epoch, remark)
+        return umlaut.errors.InputNotNormalizedError(epoch, remark)
 
 
 def check_input_is_floating(epoch, model, x_train):
@@ -38,17 +38,18 @@ def check_input_is_floating(epoch, model, x_train):
     '''
     # x_train is a numpy object, not a tensor
     if not tf.as_dtype(x_train.dtype).is_floating:
-        return InputNotFloatingError(epoch)
+        return umlaut.errors.InputNotFloatingError(epoch)
 
 
-def check_nan_in_loss(epoch, loss):
+def check_nan_in_loss(epoch, logs):
     '''Returns a NanInLossError if loss is NaN.
     '''
+    loss = logs['loss']
     if np.isnan(loss):
-        return NaNInLossError(epoch)
+        return umlaut.errors.NaNInLossError(epoch)
 
 
-def check_softmax_computed_before_loss(epoch, model):
+def check_softmax_computed_before_loss(model):
     '''Ensures the loss function used has a proper from_logits setting.
     '''
     # from_logits is always False by default per source code
@@ -58,4 +59,32 @@ def check_softmax_computed_before_loss(epoch, model):
         from_logits = model.loss._fn_kwargs.get('from_logits', False)
     last_layer_is_softmax = isinstance(model.layers[-1], tf.keras.layers.Softmax)
     if not last_layer_is_softmax and not from_logits:
-        return NoSoftmaxActivationError(epoch)
+        return umlaut.errors.NoSoftmaxActivationError(epoch)
+
+
+def check_learning_rate_range(epoch, model):
+    NotImplemented
+
+
+def check_overfitting(epoch, model, logs):
+    if not model.history.history:
+        return
+    last_loss = model.history.history['loss'][-1]
+    last_val_loss = model.history.history['val_loss'][-1]
+    d_loss = logs['loss'] - last_loss
+    d_val_loss = logs['val_loss'] - last_val_loss
+    if d_val_loss > 0:
+        if d_loss <= 0:
+            return umlaut.errors.OverfittingError(epoch)
+
+
+def check_high_validation_acc(epoch, logs):
+    NotImplemented
+
+
+def check_initialization(epoch, model, logs):
+    NotImplemented
+
+
+def check_increasing_graph_size(epoch, model):
+    NotImplemented

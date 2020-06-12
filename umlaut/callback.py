@@ -6,6 +6,7 @@ import json
 
 from umlaut.client import UmlautClient
 from umlaut.heuristics import run_epoch_heuristics
+from umlaut.heuristics import run_pretrain_heuristics
 
 class UmlautCallback(tf.keras.callbacks.Callback):
     def __init__(self, model, session_name=None, host='localhost', offline=False):
@@ -38,25 +39,13 @@ class UmlautCallback(tf.keras.callbacks.Callback):
 
 
     def on_train_begin(self, logs=None):
-        NotImplemented
+        return run_pretrain_heuristics(self.model)
 
 
     def on_epoch_end(self, batch, logs=None):
         if self.umlaut_client:
-            metrics_dict = {
-                'loss': {
-                    'train': [batch, float(logs['loss'])],
-                },
-                'acc': {
-                    'train': [batch, float(logs['accuracy'] if self.tf_version == 2 else logs['acc'])],
-                }
-            }
-            if any(k.startswith('val') for k in logs):
-                # validation split exists
-                metrics_dict['loss']['val'] = [batch, float(logs['val_loss'])]
-                metrics_dict['acc']['val'] = [batch, float(logs['val_accuracy'] if self.tf_version == 2 else logs['val_acc'])]
-            self.umlaut_client.send_batch_metrics(metrics_dict)
-        print(logs)
+            self.umlaut_client.send_logs_to_server(batch, logs)
+
         print('Running Umlaut checks...')
         model_input = K.eval(self.input_node)
         errors = run_epoch_heuristics(batch, self.model, logs, model_input)
@@ -64,7 +53,6 @@ class UmlautCallback(tf.keras.callbacks.Callback):
         if errors and self.umlaut_client:
             self.umlaut_client.send_errors(errors)
 
-        # print(K.eval(self.output_node))
 
     def register_model(self, model):
         if not isinstance(model, tf.keras.models.Model):

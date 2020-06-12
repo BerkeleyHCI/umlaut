@@ -10,6 +10,7 @@ class UmlautClient:
         # set up host for umlaut server
         self.host = host or 'localhost'
 
+        #TODO remove when replacing db calls with API calls
         client = MongoClient(host, 27017)
         self.db = client['umlaut']
 
@@ -20,7 +21,28 @@ class UmlautClient:
         self.session_id = self.get_sessionid_str_from_name(session_name)
 
 
-    def send_batch_metrics(self, req_data):
+    def send_logs_to_server(self, batch, logs):
+        if not logs:
+            return
+        val = any(k.startswith('val') for k in logs)
+        acc = any(k.startswith('acc') for k in logs)
+        metrics_dict = {
+            'loss': {
+                'train': [batch, float(logs['loss'])],
+            },
+        }
+        if val:
+            metrics_dict['loss']['val'] = [batch, float(logs['val_loss'])]
+        if acc:
+            metrics_dict['acc'] = {
+                'train': [batch, float(logs['accuracy'] if self.tf_version == 2 else logs['acc'])],
+            }
+            if val:
+                metrics_dict['acc']['val'] = [batch, float(logs['val_accuracy'] if self.tf_version == 2 else logs['val_acc'])]
+        self._send_batch_metrics(metrics_dict)
+
+
+    def _send_batch_metrics(self, req_data):
         '''send updated metrics to umlaut server.
         looks like:
         {
