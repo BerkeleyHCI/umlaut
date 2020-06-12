@@ -6,9 +6,10 @@ from pymongo import ReturnDocument
 
 
 class UmlautClient:
-    def __init__(self, session_name=None, host=None):
+    def __init__(self, session_name=None, host=None, port=5000):
         # set up host for umlaut server
         self.host = host or 'localhost'
+        self.host = host + f':{port}'
 
         client = MongoClient(host, 27017)
         self.db = client['umlaut']
@@ -17,7 +18,15 @@ class UmlautClient:
         if not session_name:
             # if no name, unnamed_{yymmdd_hhmmss} is used
             session_name = 'unnamed_' + dt.strftime(dt.now(), '%y%m%d_%H%M%S')
-        self.session_id = self.get_sessionid_str_from_name(session_name)
+        self.session_id = self.get_session_id_from_name(session_name)
+
+
+    def get_session_id_from_name(self, session_name):
+        r = requests.get(
+            f'http://{self.host}/api/getSessionIdFromName/{session_name}',
+        )
+        r.raise_for_status()
+        return r.content
 
 
     def send_batch_metrics(self, req_data):
@@ -29,7 +38,7 @@ class UmlautClient:
         }
         '''
         r = requests.post(
-            f'http://{self.host}:5000/api/updateSessionPlots/{self.session_id}',
+            f'http://{self.host}/api/updateSessionPlots/{self.session_id}',
             json=req_data,
         )
         r.raise_for_status()
@@ -51,19 +60,3 @@ class UmlautClient:
                 }},
                 upsert=True,
             )
-
-
-    #TODO make this an API call instead
-    def get_sessionid_str_from_name(self, session_name):
-        '''Find a session named session_name, otherwise make it.
-        '''
-        ses = self.db.sessions.find_one_and_update(
-            {'name': session_name},
-            {'$set': {
-                'name': session_name,
-                'modify_timestamp': dt.now().isoformat(),
-            }},
-            upsert=True,
-            return_document=ReturnDocument.AFTER,
-        )
-        return str(ses['_id'])  # return string from ObjectId

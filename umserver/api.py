@@ -2,14 +2,33 @@
 
 import bson
 from bson import ObjectId
+from datetime import datetime as dt
 from flask import abort
 from flask import request
+from pymongo import ReturnDocument
 
 from umserver import app
 from umserver.models import db
 
 # get the internal flask object for client facing API
 server = app.server
+
+
+@server.route('/api/getSessionIdFromName/<sess_name>', methods=['GET'])
+def get_sessionid_str_from_name(sess_name):
+    '''Find a session named session_name, otherwise make it.
+    '''
+    ses = db.sessions.find_one_and_update(
+        {'name': sess_name},
+        {'$set': {
+            'name': sess_name,
+            'modify_timestamp': dt.now().isoformat(),
+        }},
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+    )
+    return str(ses['_id'])  # return string from ObjectId
+
 
 @server.route('/api/updateSessionPlots/<sess_id>', methods=['POST'])
 def update_session_plots(sess_id):
