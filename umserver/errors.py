@@ -26,7 +26,7 @@ class BaseErrorMessage:
             error_fmt.append(html.Small(f'Captured at epoch {self.epoch}.'))
         error_fmt.append(html.Hr())
 
-        rendered = html.Div(
+        return html.Div(
             error_fmt,
             id=id_in,
             style={'cursor': 'pointer', 'display': 'inline-block'},
@@ -34,7 +34,10 @@ class BaseErrorMessage:
 
     def __init__(self, epoch, *args, **kwargs):
         self.epoch = epoch
-        self.annotations = [epoch - 1, epoch]
+        if type(self.epoch) is list:
+            self.annotations = [(e - 1, e) for e in epoch]
+        else:
+            self.annotations = [epoch - 1, epoch]
 
     def __str__(self):
         return '\n'.join((self.title, self.description))
@@ -51,8 +54,7 @@ class InputNotNormalizedError(BaseErrorMessage):
         '`your_input_images = (your_input_images / 127.0) - 1`',
     ]
     def __init__(self, epoch, remarks=''):
-        self.epoch = epoch
-        self.annotations = [epoch - 1, epoch]
+        super().__init__(epoch)
         if remarks:
             #TODO make remarks formatting better in the future
             self.subtitle = InputNotNormalizedError.subtitle.format(

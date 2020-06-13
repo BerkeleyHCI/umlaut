@@ -34,13 +34,13 @@ def get_go_data_from_metrics(plot, metrics_data):
     ]
 
 
-def make_annotation_box_shape(annotation):
+def make_annotation_box_shape(x1):
     return {
         'type': 'rect',
         'xref': 'x',
         'yref': 'paper',
-        'x0': annotation['start'],  # x0, x1 are epoch bounds
-        'x1': annotation['end'],
+        'x0': x1 - 1,  # x0, x1 are epoch bounds
+        'x1': x1,
         'y0': 0,
         'y1': 1,
         'fillcolor': 'LightPink',
@@ -154,7 +154,7 @@ def highlight_graph_for_error(error_msgs, clear_clicks, errors_clicks, annotatio
     trigger_id = eval(trigger_id)
     trigger_idx = trigger_id['index']  # error-msg.id.index
 
-    if not error_msgs[trigger_idx].get('annotations', False):
+    if not error_msgs[trigger_idx].get('epoch', False):
         # no annotations associated with the clicked error
         return annotations_cache
 
@@ -169,9 +169,7 @@ def highlight_graph_for_error(error_msgs, clear_clicks, errors_clicks, annotatio
     
     clicked_error_annotation = {
         'error-index': trigger_idx,
-        'type': 'rect',
-        'start': error_msgs[trigger_idx]['annotations'][0],
-        'end': error_msgs[trigger_idx]['annotations'][1],
+        'indices': list(set(error_msgs[trigger_idx]['epoch'])),
     }
     annotations_cache.append(clicked_error_annotation)
 
@@ -254,7 +252,7 @@ def update_errors_list(errors_data):
 
     for i, error_spec in enumerate(errors_data):
         result_divs.append(ERROR_KEYS[error_spec['error_id_str']](
-            error_spec['epoch'],
+            error_spec.get('epoch', None),
         ).render(
             {
                 'type': 'error-msg',
@@ -283,9 +281,10 @@ def update_loss(metrics_data, annotations_data):
 
     if annotations_data:
         for annotation in annotations_data:
-            graph_figure['layout']['shapes'].append(
-                make_annotation_box_shape(annotation)
-            )
+            for idx in annotation['indices']:
+                graph_figure['layout']['shapes'].append(
+                    make_annotation_box_shape(idx)
+                )
 
     return graph_figure
 
@@ -307,9 +306,10 @@ def update_acc(metrics_data, annotations_data):
 
     if annotations_data:
         for annotation in annotations_data:
-            graph_figure['layout']['shapes'].append(
-                make_annotation_box_shape(annotation)
-            )
+            for idx in annotation['indices']:
+                graph_figure['layout']['shapes'].append(
+                    make_annotation_box_shape(idx)
+                )
 
     return graph_figure
 

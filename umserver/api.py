@@ -77,17 +77,22 @@ def update_session_errors(sess_id):
 
     errors = request.get_json()
     for error_id in errors:
-        db.errors.find_one_and_update(
-            {'error_id_str': error_id, 'session_id': sess_id},
-            {
-                '$set': {
+        error_obj = {
+            '$set': {
                 'session_id': sess_id,
                 'error_id_str': error_id,
-                },
-                '$push': {
-                    'epoch': errors[error_id]['epoch'],
-                },
             },
+        }
+        if errors[error_id]['epoch'] is None:
+            # don't make a list of None's from global errors, just set once.
+            error_obj['$set'].update({'epoch': None})
+        else:
+            error_obj['$push'] = {
+                'epoch': errors[error_id]['epoch'],
+            }
+        db.errors.find_one_and_update(
+            {'error_id_str': error_id, 'session_id': sess_id},
+            error_obj,
             upsert=True,
         )
     return f'Updated {str(len(errors))}'
