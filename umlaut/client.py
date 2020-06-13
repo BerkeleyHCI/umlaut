@@ -11,10 +11,6 @@ class UmlautClient:
         self.host = host or 'localhost'
         self.host = host + f':{port}'
 
-        #TODO remove when replacing db calls with API calls
-        client = MongoClient(host, 27017)
-        self.db = client['umlaut']
-
         # get session id from database, whether existing or new
         if not session_name:
             # if no name, unnamed_{yymmdd_hhmmss} is used
@@ -66,19 +62,25 @@ class UmlautClient:
         r.raise_for_status()
 
 
-    #TODO make this an API call instead
     def send_errors(self, errors):
-        '''send and format an error message (for now)'''
+        '''send error messages to the server to be displayed.
+        
+        Data format is:
+        {
+            error_id_str: {
+                annotations: [],  #TODO not yet used
+                epoch: [items pushed to list],
+            }
+        }
+        '''
+        req_data = {}
         for error in filter(None, errors):
-            self.db.errors.find_one_and_update(
-                {'error_id_str': error.id_str, 'epoch': error.epoch},
-                {'$set': {
-                    'session_id': ObjectId(self.session_id),
-                    'error_id_str': error.id_str,
-                    'epoch': error.epoch,
-                    'annotations': error.annotations,
-                    'title': error.title,
-                    'description': error.description,
-                }},
-                upsert=True,
+            req_data[error.id_str] = {
+                'epoch': error.epoch,
+                'annotations': error.annotations,
+            }
+        if req_data:
+            r = requests.post(
+                f'https://{self.host}/api/updateSessionErrors/{self.session_id}',
+                json=req_data,
             )

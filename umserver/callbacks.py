@@ -13,6 +13,7 @@ from flask import abort
 from flask import request
 
 from umserver import app
+from umserver.errors import ERROR_KEYS
 from umserver.helpers import argmax, index_of_dict
 from umserver.models import db
 from umserver.models import get_training_sessions
@@ -251,13 +252,14 @@ def update_errors_list(errors_data):
     if len(errors_data) == 0:
         result_divs.append(html.P('No errors yay!'))
 
-    for i, error in enumerate(errors_data):
-        result_divs.append(render_error_message(
+    for i, error_spec in enumerate(errors_data):
+        result_divs.append(ERROR_KEYS[error_spec['error_id_str']](
+            error_spec['epoch'],
+        ).render(
             {
                 'type': 'error-msg',
                 'index': i,
             },
-            error,
         ))
 
     return result_divs

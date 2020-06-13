@@ -59,7 +59,7 @@ def check_softmax_computed_before_loss(model):
         from_logits = model.loss._fn_kwargs.get('from_logits', False)
     last_layer_is_softmax = isinstance(model.layers[-1], tf.keras.layers.Softmax)
     if not last_layer_is_softmax and not from_logits:
-        return umlaut.errors.NoSoftmaxActivationError(epoch)
+        return umlaut.errors.NoSoftmaxActivationError()
 
 
 def check_learning_rate_range(epoch, model):

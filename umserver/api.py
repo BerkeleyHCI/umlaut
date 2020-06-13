@@ -53,7 +53,7 @@ def update_session_plots(sess_id):
 
     updates = request.get_json()
     update_plots = updates.keys()
-    for plot_name in update_plots:  # loss, acc
+    for plot_name in updates:  # loss, acc
         for plot_col in updates[plot_name]:  # train, val
             update_data = updates[plot_name][plot_col]
             assert len(list(update_data)) == 2  # [epoch, data]
@@ -63,4 +63,30 @@ def update_session_plots(sess_id):
                 upsert=True,
             )
             print(f'epoch {update_data[0]}: {plot_name}.{plot_col} <-+ {update_data[1]}')
-    return 'done!'
+
+
+@server.route('/api/updateSessionErrors/<sess_id>', methods=['POST'])
+def send_errors(sess_id):
+    '''Receive an error message id and store in the db.'''
+    try:
+        sess_id = ObjectId(sess_id)
+    except bson.errors.InvalidId:
+        abort(400)
+    if db.sessions.find_one(sess_id) is None:
+        abort(404)  # session not found
+
+    errors = request.get_json()
+    error_ids = errors.keys()
+    for error_id in error_ids:
+        db.errors.find_one_and_update(
+            {'error_id_str': error_id, 'session_id': sess_id},
+            {'$set': {
+                'session_id': sess_id,
+                'error_id_str': error_id,
+                'annotations': errors[error_id]['annotations'],
+                '$push': {
+                    'epoch': errors[error_id]['epoch'],
+                }
+            }},
+            upsert=True,
+        )
