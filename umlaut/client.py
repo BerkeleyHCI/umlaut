@@ -23,14 +23,16 @@ class UmlautClient:
             f'http://{self.host}/api/getSessionIdFromName/{session_name}',
         )
         r.raise_for_status()
-        return r.content
+        return r.text
 
 
     def send_logs_to_server(self, batch, logs):
         if not logs:
             return
         val = any(k.startswith('val') for k in logs)
-        acc = any(k.startswith('acc') for k in logs)
+        acc = [k for k in logs if k.startswith('acc')]
+        if acc:
+            acc = acc[0]
         metrics_dict = {
             'loss': {
                 'train': [batch, float(logs['loss'])],
@@ -39,11 +41,9 @@ class UmlautClient:
         if val:
             metrics_dict['loss']['val'] = [batch, float(logs['val_loss'])]
         if acc:
-            metrics_dict['acc'] = {
-                'train': [batch, float(logs['accuracy'] if self.tf_version == 2 else logs['acc'])],
-            }
+            metrics_dict['acc'] = {'train': [batch, logs[acc]]}
             if val:
-                metrics_dict['acc']['val'] = [batch, float(logs['val_accuracy'] if self.tf_version == 2 else logs['val_acc'])]
+                metrics_dict['acc']['val'] = [batch, float(logs[f'val_{acc}'])]
         self._send_batch_metrics(metrics_dict)
 
 
@@ -81,6 +81,6 @@ class UmlautClient:
             }
         if req_data:
             r = requests.post(
-                f'https://{self.host}/api/updateSessionErrors/{self.session_id}',
+                f'http://{self.host}/api/updateSessionErrors/{self.session_id}',
                 json=req_data,
             )

@@ -24,8 +24,7 @@ class InputNotNormalizedError(BaseErrorMessage):
                   '\n#### Solution  \nYou should normalize the input data where its values fall between the typical ranges of 0 to 1 or -1 to 1, before passing them into the model. E.g., for image data (pixels ranging from 0-255), a typical way to normalize the pixel values to the range of 0 to 1 is:  ' \
                   '\n\n     `training_images = training_images / 255.0`'
     def __init__(self, epoch, remarks=''):
-        self.epoch = epoch
-        self.annotations = [epoch - 1, epoch]
+        super().__init__(epoch)
         if remarks:
             #TODO make remarks formatting better in the future
             self.description = InputNotNormalizedError.description.format(
@@ -57,8 +56,8 @@ class NoSoftmaxActivationError(BaseErrorMessage):
                   '\n\n`tf.keras.losses.<your loss function here>(from_logits=True)`' \
                   '\n\n where specifying `from_logits=True` will tell keras to apply softmax to your model output before calculating the loss function.' \
                   '\nAlternatively, you can manually add a softmax layer to the end of your model using `tf.keras.Softmax()`.'
-    def __init__(self):
-        super().__init__(epoch=-1)  #TODO epoch -1 is a hack
+    def __init__(self, *args, **kwargs):
+        self.epoch = None
         self.annotations = None  # static check, no annotations
 
 

@@ -39,7 +39,10 @@ class UmlautCallback(tf.keras.callbacks.Callback):
 
 
     def on_train_begin(self, logs=None):
-        return run_pretrain_heuristics(self.model)
+        errors = run_pretrain_heuristics(self.model)
+        print(list(filter(None, errors)) or 'No pretrain errors!')
+        if errors and self.umlaut_client:
+            self.umlaut_client.send_errors(errors)
 
 
     def on_epoch_end(self, batch, logs=None):
