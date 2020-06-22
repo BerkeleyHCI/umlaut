@@ -204,6 +204,10 @@ def update_metrics_data(intervals, pathname, metrics_data):
             k: list(zip(*plot['streams'][k])) for k in plot['streams']
         }
 
+    if go_data == metrics_data:
+        # no difference after computing the plot data, don't rerender
+        raise PreventUpdate
+
     return go_data
 
 
@@ -224,7 +228,7 @@ def update_errors_data(interval, pathname, errors_data):
     path = pathname.split('/')
     sess_id = path[path.index('session') + 1]
     try:
-        errors_data = list(db.errors.find(
+        errors_result = list(db.errors.find(
             {'session_id': ObjectId(sess_id)},
             # omit object ids from results, not json friendly
             {'_id': 0, 'session_id': 0},
@@ -232,7 +236,11 @@ def update_errors_data(interval, pathname, errors_data):
     except bson.errors.InvalidId:
         abort(400)
 
-    return errors_data
+    if errors_result == errors_data:
+        # Errors haven't changed, don't rerender.
+        raise PreventUpdate
+
+    return errors_result
 
 
 @app.callback(
