@@ -50,19 +50,6 @@ def make_annotation_box_shape(x1):
     }
 
 
-def render_error_message(id_in, error_message):
-    return html.Div(
-        [
-            html.H3(error_message['title']),
-            dcc.Markdown(error_message['description']),
-            html.Small('Captured at epoch {}.'.format(error_message['epoch'])),
-            html.Hr(),
-        ],
-        id=id_in,
-        style={'cursor': 'pointer', 'display': 'inline-block'},
-    )
-
-
 # ---------- App Callbacks ---------- #
 
 @app.callback(
@@ -88,7 +75,7 @@ def update_dropdown_from_url(pathname):
     Output('session-picker', 'options'),
     [Input('url-update', 'pathname')],
 )
-def update_dropdown_options(pathname):
+def update_session_picker(pathname):
     '''populate session picker from db on page load.
     '''
     return get_training_sessions()
@@ -98,7 +85,7 @@ def update_dropdown_options(pathname):
     Output('url', 'pathname'),
     [Input('session-picker', 'value')]
 )
-def change_url(ses):
+def redirect_to_session_url(ses):
     '''update URL based on session picked in dropdown'''
     if ses is '/':
         raise PreventUpdate
@@ -114,7 +101,7 @@ def change_url(ses):
     ],
     [State({'type': 'error-msg', 'index': ALL}, 'style')],
 )
-def highlight_errors_from_annotations(annotations_cache, error_styles, errors_cache):
+def style_annotations_errors(annotations_cache, error_styles, errors_cache):
     for style in error_styles:
         style.pop('backgroundColor', None)
     if annotations_cache:
@@ -132,7 +119,7 @@ def highlight_errors_from_annotations(annotations_cache, error_styles, errors_ca
     ],
     [State('annotations-cache', 'data')],
 )
-def highlight_graph_for_error(error_msgs, clear_clicks, errors_clicks, annotations_cache):
+def select_annotations(error_msgs, clear_clicks, errors_clicks, annotations_cache):
     '''Update annotations state when an error message
     is clicked, or if the annotations are cleared.
     '''
@@ -181,7 +168,7 @@ def highlight_graph_for_error(error_msgs, clear_clicks, errors_clicks, annotatio
     [Input('interval-component', 'n_intervals'), Input('url', 'pathname')],
     [State('metrics-cache', 'data')],
 )
-def update_metrics_data(intervals, pathname, metrics_data):
+def query_metrics(intervals, pathname, metrics_data):
     '''handle updates to the metrics data'''
     if intervals is None or pathname is None:
         raise PreventUpdate
@@ -216,7 +203,7 @@ def update_metrics_data(intervals, pathname, metrics_data):
     [Input('interval-component', 'n_intervals'), Input('url', 'pathname')],
     [State('errors-cache', 'data')],
 )
-def update_errors_data(interval, pathname, errors_data):
+def query_errors(interval, pathname, errors_data):
     '''Updates the errors cache by making an API call
     '''
     if interval is None or pathname is None:
@@ -247,7 +234,7 @@ def update_errors_data(interval, pathname, errors_data):
     Output('errors-list', 'children'),
     [Input('errors-cache', 'data')],
 )
-def update_errors_list(errors_data):
+def render_errors(errors_data):
     '''Renders errors from errors cache changes.
     '''
     result_divs = []

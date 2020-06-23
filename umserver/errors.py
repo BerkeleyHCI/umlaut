@@ -16,7 +16,7 @@ class BaseErrorMessage:
     def render(self, id_in):
         error_fmt = [
             html.H3(self.title),
-            html.P(self.subtitle),
+            dcc.Markdown(self.subtitle),
             html.H4('Solution'),
             dcc.Markdown(self.description),
         ]
