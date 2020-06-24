@@ -6,8 +6,6 @@ import dash_html_components as html
 from umserver import app
 from umserver.models import get_training_sessions
 
-x = [-1, 0, 1, 2, 3]
-
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     dcc.Location(id='url-update', refresh=False),
@@ -20,50 +18,68 @@ app.layout = html.Div([
         ),
         dcc.Graph(
             id='timeline',
+            config={
+                'displayModeBar': False,
+                'watermark': False,
+                'displaylogo': False,
+            },
             figure={
                 'layout': {
-                    'height': 300,
-                    'bargap': 0,
+                    'height': 150,
+                    'barmode': 'relative',
+                    'bargap': 0.05,
                     'yaxis': {
                         'showgrid': False,
-                        'zeroline': False,
-                        'showline': False,
+                        'zeroline': True,
                         'showticklabels': False,
-                        'range': [-1, 1],
+                        'fixedrange': True,
                     },
-                    'xaxis_title': 'Errors over time',
+                    'xaxis': {
+                        'fixedrange': True,
+                    },
+                    'margin': {
+                        't': 0,
+                        'b': 30,
+                    }
                 },
                 'data': [
                     {
-                        'x': [0, 1],
-                        'y': [0.5, 0.5],
-                        'type': 'scatter',
+                        'x': [0, 1, 2, 3, 4],
+                        'y': [1, 1, 1, 1, 1],
+                        'customdata': ['c-badnorm'] * 5,
+                        'type': 'bar',
+                        'marker': {
+                            'color': 'hsl(34, 100%, 75%)',
+                        },
                         'opacity': 0.5,
-                        'mode': 'line',
+                        'name': 'BadNormalization',
+                    },
+                    {
+                        'x': [2, 3, 4],
+                        'y': [1, 1, 1],
+                        'customdata': ['c-overfitting'] * 3,
+                        'type': 'bar',
+                        'marker': {
+                            'color': 'hsl(0, 100%, 75%)',
+                        },
+                        'opacity': 0.5,
                         'name': 'Overfitting',
-                        'line': {'color': 'red', 'width': 20},
                     },
                     {
-                        'x': [0, 2],
-                        'y': [0, 0],
-                        'type': 'scatter',
+                        'x': [0],
+                        'y': [-1],
+                        'customdata': ['c-badloss'] * 1,
+                        'type': 'bar',
+                        'marker': {
+                            'color': 'hsl(180, 100%, 75%)',
+                        },
                         'opacity': 0.5,
-                        'mode': 'line',
-                        'name': 'Normalization',
-                        'line': {'color': 'green', 'width': 20},
-                    },
-                    {
-                        'x': [1, 2],
-                        'y': [-0.5, -0.5],
-                        'type': 'scatter',
-                        'opacity': 0.5,
-                        'mode': 'line',
-                        'name': 'Plateauing',
-                        'line': {'color': 'yellow', 'width': 20},
+                        'name': 'BadLoss',
                     },
                 ]
             },
         ),
+        html.P(id='p_debug'),
     ]),
     html.Div([
             html.H3('Visualizations'),

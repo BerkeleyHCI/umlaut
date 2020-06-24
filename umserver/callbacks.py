@@ -94,6 +94,14 @@ def redirect_to_session_url(ses):
 
 
 @app.callback(
+    Output('p_debug', 'children'),
+    [Input('timeline', 'clickData')],
+)
+def write_debug_to_p(timeline_clickdata):
+    return str(timeline_clickdata)
+
+
+@app.callback(
     Output({'type': 'error-msg', 'index': ALL}, 'style'),
     [
         Input('annotations-cache', 'data'),
