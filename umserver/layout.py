@@ -27,6 +27,7 @@ app.layout = html.Div([
                 'layout': {
                     'height': 150,
                     'barmode': 'relative',
+                    'hovermode': 'closest',
                     'bargap': 0.05,
                     'yaxis': {
                         'showgrid': False,
