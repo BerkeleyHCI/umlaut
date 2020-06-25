@@ -52,6 +52,7 @@ app.layout = html.Div([
                         'marker': {
                             'color': 'hsl(34, 100%, 75%)',
                         },
+                        'hoverinfo': 'name',
                         'opacity': 0.5,
                         'name': 'BadNormalization',
                     },
@@ -63,6 +64,7 @@ app.layout = html.Div([
                         'marker': {
                             'color': 'hsl(0, 100%, 75%)',
                         },
+                        'hoverinfo': 'name',
                         'opacity': 0.5,
                         'name': 'Overfitting',
                     },
@@ -74,6 +76,7 @@ app.layout = html.Div([
                         'marker': {
                             'color': 'hsl(180, 100%, 75%)',
                         },
+                        'hoverinfo': 'name',
                         'opacity': 0.5,
                         'name': 'BadLoss',
                     },
