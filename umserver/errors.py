@@ -18,8 +18,7 @@ class BaseErrorMessage:
         return self.epochs is None
 
     def get_annotations(self):
-        return [(e - 1, e) for e in epochs]
-
+        return [(e - 1, e) for e in self.epochs]
 
     def render(self, id_in):
         error_fmt = [
@@ -43,7 +42,7 @@ class BaseErrorMessage:
     def __init__(self, epochs, *args, **kwargs):
         self.epochs = epochs
         if type(self.epochs) is not list:
-            self.epochs = list(epochs)
+            self.epochs = [epochs]
 
     def __str__(self):
         return '\n'.join((self.title, self.description))
@@ -93,9 +92,12 @@ class NoSoftmaxActivationError(BaseErrorMessage):
         'where specifying `from_logits=True` will tell keras to apply softmax to your model output before calculating the loss function.',
         'Alternatively, you can manually add a softmax layer to the end of your model using `tf.keras.Softmax()`.',
     ]
+
+    def get_annotations(self):
+        return None  # static check, no annotations
+
     def __init__(self, *args, **kwargs):
         self.epochs = None
-        self.get_annotations = lambda self: None  # static check, no annotations
 
 
 class OverfittingError(BaseErrorMessage):
