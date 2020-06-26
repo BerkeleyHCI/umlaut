@@ -36,6 +36,7 @@ app.layout = html.Div([
                         'fixedrange': True,
                     },
                     'xaxis': {
+                        'rangemode': 'nonnegative',
                         'fixedrange': True,
                     },
                     'margin': {
@@ -43,47 +44,11 @@ app.layout = html.Div([
                         'b': 30,
                     }
                 },
-                'data': [
-                    {
-                        'x': [0, 1, 2, 3, 4],
-                        'y': [1, 1, 1, 1, 1],
-                        'customdata': ['c-badnorm'] * 5,
-                        'type': 'bar',
-                        'marker': {
-                            'color': 'hsl(34, 100%, 75%)',
-                        },
-                        'hoverinfo': 'name',
-                        'opacity': 0.5,
-                        'name': 'BadNormalization',
-                    },
-                    {
-                        'x': [2, 3, 4],
-                        'y': [1, 1, 1],
-                        'customdata': ['c-overfitting'] * 3,
-                        'type': 'bar',
-                        'marker': {
-                            'color': 'hsl(0, 100%, 75%)',
-                        },
-                        'hoverinfo': 'name',
-                        'opacity': 0.5,
-                        'name': 'Overfitting',
-                    },
-                    {
-                        'x': [0],
-                        'y': [-1],
-                        'customdata': ['c-badloss'] * 1,
-                        'type': 'bar',
-                        'marker': {
-                            'color': 'hsl(180, 100%, 75%)',
-                        },
-                        'hoverinfo': 'name',
-                        'opacity': 0.5,
-                        'name': 'BadLoss',
-                    },
-                ]
+                'data': [],
             },
         ),
         html.P(id='p_debug'),
+        html.P(id='p_debug_2'),
     ]),
     html.Div([
             html.H3('Visualizations'),

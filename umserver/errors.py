@@ -13,6 +13,14 @@ class BaseErrorMessage:
             self._md_solution,
         )
 
+    @property
+    def is_static(self):
+        return self.epochs is None
+
+    def get_annotations(self):
+        return [(e - 1, e) for e in epochs]
+
+
     def render(self, id_in):
         error_fmt = [
             html.H3(self.title),
@@ -20,10 +28,10 @@ class BaseErrorMessage:
             html.H4('Solution'),
             dcc.Markdown(self.description),
         ]
-        if self.epoch is None:
+        if self.epochs is None:
             error_fmt.append(html.Small('Captured before start of training.'))
         else:
-            error_fmt.append(html.Small(f'Captured at epoch {self.epoch}.'))
+            error_fmt.append(html.Small(f'Captured at epochs {self.epochs}.'))
         error_fmt.append(html.Hr())
 
         return html.Div(
@@ -32,12 +40,10 @@ class BaseErrorMessage:
             style={'cursor': 'pointer', 'display': 'inline-block'},
         )
 
-    def __init__(self, epoch, *args, **kwargs):
-        self.epoch = epoch
-        if type(self.epoch) is list:
-            self.annotations = [(e - 1, e) for e in epoch]
-        else:
-            self.annotations = [epoch - 1, epoch]
+    def __init__(self, epochs, *args, **kwargs):
+        self.epochs = epochs
+        if type(self.epochs) is not list:
+            self.epochs = list(epochs)
 
     def __str__(self):
         return '\n'.join((self.title, self.description))
@@ -53,13 +59,11 @@ class InputNotNormalizedError(BaseErrorMessage):
         'You should normalize the input data where its values fall between the typical ranges of 0 to 1 or -1 to 1, before passing them into the model. E.g., for image data (pixels ranging from 0-255), a typical way to normalize the pixel values to the range of -1 to 1 is:',
         '`your_input_images = (your_input_images / 127.0) - 1`',
     ]
-    def __init__(self, epoch, remarks=''):
-        super().__init__(epoch)
-        if remarks:
-            #TODO make remarks formatting better in the future
-            self.subtitle = InputNotNormalizedError.subtitle.format(
-                ' (' + remarks + ')',
-            )
+    def __init__(self, epochs, remarks=''):
+        super().__init__(epochs)
+        self.subtitle = InputNotNormalizedError.subtitle.format(
+            ' (' + remarks + ')',
+        )
     
 
 class InputNotFloatingError(BaseErrorMessage):
@@ -90,8 +94,8 @@ class NoSoftmaxActivationError(BaseErrorMessage):
         'Alternatively, you can manually add a softmax layer to the end of your model using `tf.keras.Softmax()`.',
     ]
     def __init__(self, *args, **kwargs):
-        self.epoch = None
-        self.annotations = None  # static check, no annotations
+        self.epochs = None
+        self.get_annotations = lambda self: None  # static check, no annotations
 
 
 class OverfittingError(BaseErrorMessage):

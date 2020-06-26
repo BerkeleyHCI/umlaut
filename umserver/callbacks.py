@@ -50,6 +50,29 @@ def make_annotation_box_shape(x1):
     }
 
 
+def get_viz_trace_from_error(error_id_str, epochs, error_idx, color_hsl=None):
+    '''Given an error object, return a viz plot trace for it.'''
+    return_data = {
+        'customdata': [error_idx] * 5,  # one error id per point
+        'type': 'bar',
+        'marker': {
+            'color': f'hsl({random.randint(0, 359)}, 85, 60)',
+        },
+        'hoverinfo': 'name',
+        'opacity': 0.5,
+        'name': error_id_str,
+    }
+
+    if epochs is None:
+        return_data['x'] = [0]
+        return_data['y'] = [-1]
+        return return_data
+    
+    return_data['x'] = epochs
+    return_data['y'] = [1] * len(epochs)
+    return return_data
+
+
 # ---------- App Callbacks ---------- #
 
 @app.callback(
@@ -94,11 +117,19 @@ def redirect_to_session_url(ses):
 
 
 @app.callback(
+    Output('p_debug_2', 'children'),
+    [Input('timeline', 'restyleData')],
+)
+def write_debug_to_p2(data):
+    return str(data)
+
+
+@app.callback(
     Output('p_debug', 'children'),
     [Input('timeline', 'clickData')],
 )
-def write_debug_to_p(timeline_clickdata):
-    return str(timeline_clickdata)
+def write_debug_to_p(data):
+    return str(data)
 
 
 @app.callback(
@@ -114,6 +145,7 @@ def style_annotations_errors(annotations_cache, error_styles, errors_cache):
         style.pop('backgroundColor', None)
     if annotations_cache:
         for annotation in annotations_cache:
+            #TODO change color via HSL here? Or define in error msg?
             error_styles[annotation['error-index']]['backgroundColor'] = 'LightPink'
     return error_styles
 
@@ -121,13 +153,16 @@ def style_annotations_errors(annotations_cache, error_styles, errors_cache):
 @app.callback(
     Output('annotations-cache', 'data'),
     [
-        Input('errors-cache', 'data'),
         Input('btn-clear-annotations', 'n_clicks'),
         Input({'type': 'error-msg', 'index': ALL}, 'n_clicks'),
+        Input('timeline', 'clickData'),
     ],
-    [State('annotations-cache', 'data')],
+    [
+        State('annotations-cache', 'data'),
+        State('errors-cache', 'data'),
+    ],
 )
-def select_annotations(error_msgs, clear_clicks, errors_clicks, annotations_cache):
+def select_annotations(clear_clicks, errors_clicks, timeline_clickdata, annotations_cache, error_msgs):
     '''Update annotations state when an error message
     is clicked, or if the annotations are cleared.
     '''
@@ -145,11 +180,16 @@ def select_annotations(error_msgs, clear_clicks, errors_clicks, annotations_cach
     if trigger_id == 'btn-clear-annotations':
         return []
 
+    if trigger_id == 'timeline':
+        print(trigger_id)
+        print(timeline_clickdata)
+        raise PreventUpdate
+
     # trigger_id is...probably... a dict of the error-msg id
-    trigger_id = eval(trigger_id)
+    trigger_id = json.loads(trigger_id)
     trigger_idx = trigger_id['index']  # error-msg.id.index
 
-    if not error_msgs[trigger_idx].get('epoch', False):
+    if not error_msgs[trigger_idx].get('epochs', False):
         # no annotations associated with the clicked error
         return annotations_cache
 
@@ -162,9 +202,9 @@ def select_annotations(error_msgs, clear_clicks, errors_clicks, annotations_cach
     else:
         annotations_cache = []
     
-    clicked_error_annotation = {
+    clicked_error_annotation = {  # link error id to its annotations
         'error-index': trigger_idx,
-        'indices': list(set(error_msgs[trigger_idx]['epoch'])),
+        'indices': list(set(error_msgs[trigger_idx]['epochs'])),  #TODO refactor to epochs
     }
     annotations_cache.append(clicked_error_annotation)
 
@@ -227,7 +267,7 @@ def query_errors(interval, pathname, errors_data):
             {'session_id': ObjectId(sess_id)},
             # omit object ids from results, not json friendly
             {'_id': 0, 'session_id': 0},
-        ).sort([('epoch', -1)]))  # sort by epoch descending (latest first)
+        ).sort([('epochs', -1)]))  # sort by epoch descending (latest first)
     except bson.errors.InvalidId:
         abort(400)
 
@@ -239,10 +279,36 @@ def query_errors(interval, pathname, errors_data):
 
 
 @app.callback(
+    Output('timeline', 'figure'),
+    [Input('errors-cache', 'data')],  # will need to listen to annotations cache too
+    [State('timeline', 'figure')],
+)
+def render_errors_viz(errors_data, figure):
+    '''Renders the error timeline visualization with error data
+    '''
+    if not errors_data:
+        raise PreventUpdate
+
+    print(errors_data)
+
+    timeline_trace_data = []
+
+    for i, error_spec in enumerate(errors_data):
+        timeline_trace_data.append(get_viz_trace_from_error(
+            error_spec['error_id_str'],
+            error_spec.get('epochs', None),
+            i,
+        ))
+
+    figure['data'] = timeline_trace_data
+    return figure
+
+
+@app.callback(
     Output('errors-list', 'children'),
     [Input('errors-cache', 'data')],
 )
-def render_errors(errors_data):
+def render_errors_list(errors_data):
     '''Renders errors from errors cache changes.
     '''
     result_divs = []
@@ -255,7 +321,7 @@ def render_errors(errors_data):
 
     for i, error_spec in enumerate(errors_data):
         result_divs.append(ERROR_KEYS[error_spec['error_id_str']](
-            error_spec.get('epoch', None),
+            error_spec.get('epochs', None),  #TODO need to refactor to 'epochs'
         ).render(
             {
                 'type': 'error-msg',
@@ -283,7 +349,7 @@ def update_loss(metrics_data, annotations_data):
     }
 
     if annotations_data:
-        for annotation in annotations_data:
+        for annotation in annotations_data:  # for every selected error
             for idx in annotation['indices']:
                 graph_figure['layout']['shapes'].append(
                     make_annotation_box_shape(idx)
@@ -308,7 +374,7 @@ def update_acc(metrics_data, annotations_data):
     }
 
     if annotations_data:
-        for annotation in annotations_data:
+        for annotation in annotations_data:  # for every selected error
             for idx in annotation['indices']:
                 graph_figure['layout']['shapes'].append(
                     make_annotation_box_shape(idx)

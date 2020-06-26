@@ -38,7 +38,7 @@ def update_session_plots(sess_id):
 
     updates = {
         'loss': {
-            'train': [<int:epoch>, <float:value>],
+            'train': [<int:epochs>, <float:value>],
             ...,
         },
         ...,
@@ -55,7 +55,7 @@ def update_session_plots(sess_id):
     for plot_name in updates:  # loss, acc
         for plot_col in updates[plot_name]:  # train, val
             update_data = updates[plot_name][plot_col]
-            assert len(list(update_data)) == 2  # [epoch, data]
+            assert len(list(update_data)) == 2  # [epochs, data]
             db.plots.update(
                 {'session_id': sess_id, 'name': plot_name},
                 {'$push': {'streams.' + plot_col: update_data}},
@@ -83,12 +83,12 @@ def update_session_errors(sess_id):
                 'error_id_str': error_id,
             },
         }
-        if errors[error_id]['epoch'] is None:
+        if errors[error_id]['epochs'] is None:
             # don't make a list of None's from global errors, just set once.
-            error_obj['$set'].update({'epoch': None})
+            error_obj['$set'].update({'epochs': None})
         else:
             error_obj['$push'] = {
-                'epoch': errors[error_id]['epoch'],
+                'epochs': errors[error_id]['epochs'],
             }
         db.errors.find_one_and_update(
             {'error_id_str': error_id, 'session_id': sess_id},
