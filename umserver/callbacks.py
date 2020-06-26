@@ -53,7 +53,6 @@ def make_annotation_box_shape(x1):
 def get_viz_trace_from_error(error_id_str, epochs, error_idx, color_hsl=None):
     '''Given an error object, return a viz plot trace for it.'''
     return_data = {
-        'customdata': [error_idx] * 5,  # one error id per point
         'type': 'bar',
         'marker': {
             'color': f'hsl({random.randint(0, 359)}, 85, 60)',
@@ -67,9 +66,10 @@ def get_viz_trace_from_error(error_id_str, epochs, error_idx, color_hsl=None):
         return_data['x'] = [0]
         return_data['y'] = [-1]
         return return_data
-    
+
     return_data['x'] = epochs
     return_data['y'] = [1] * len(epochs)
+    return_data['customdata'] = [error_idx for _ in epochs] # one error id per point
     return return_data
 
 
@@ -181,13 +181,12 @@ def select_annotations(clear_clicks, errors_clicks, timeline_clickdata, annotati
         return []
 
     if trigger_id == 'timeline':
-        print(trigger_id)
-        print(timeline_clickdata)
-        raise PreventUpdate
-
-    # trigger_id is...probably... a dict of the error-msg id
-    trigger_id = json.loads(trigger_id)
-    trigger_idx = trigger_id['index']  # error-msg.id.index
+        # might be able to use 'curveNumber' instead of 'customdata' if always ordered
+        trigger_idx = trigger['value']['points'][0]['customdata']
+    else:
+        # trigger_id is...probably... a dict of the error-msg id
+        trigger_id = json.loads(trigger_id)
+        trigger_idx = trigger_id['index']  # error-msg.id.index
 
     if not error_msgs[trigger_idx].get('epochs', False):
         # no annotations associated with the clicked error
