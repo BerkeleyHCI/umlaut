@@ -87,9 +87,10 @@ def update_session_errors(sess_id):
             # don't make a list of None's from global errors, just set once.
             error_obj['$set'].update({'epochs': None})
         else:
-            error_obj['$addToSet'] = {'$each': {  # $each to iterate through list
-                'epochs': errors[error_id]['epochs'],
-            }}
+            error_obj['$addToSet'] = {
+                # $each to iterate through list
+                'epochs': {'$each': errors[error_id]['epochs']},
+            }
         db.errors.find_one_and_update(
             {'error_id_str': error_id, 'session_id': sess_id},
             error_obj,
