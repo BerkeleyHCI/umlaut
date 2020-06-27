@@ -43,24 +43,42 @@ def make_annotation_box_shape(x1):
         'x1': x1,
         'y0': 0,
         'y1': 1,
-        'fillcolor': 'LightPink',
+        'fillcolor': 'hsl(300, 85, 80)',
         'opacity': 0.5,
         'layer': 'below',
         'line_width': 0,
     }
 
 
-def render_error_message(id_in, error_message):
-    return html.Div(
-        [
-            html.H3(error_message['title']),
-            dcc.Markdown(error_message['description']),
-            html.Small('Captured at epoch {}.'.format(error_message['epoch'])),
-            html.Hr(),
-        ],
-        id=id_in,
-        style={'cursor': 'pointer', 'display': 'inline-block'},
-    )
+def get_viz_trace_from_error(error_id_str, epochs, error_idx, annotated=False, color_hsl=None):
+    '''Given an error object, return a viz plot trace for it.'''
+    light = min(70 + 10*error_idx, 90)
+    return_data = {
+        'type': 'bar',
+        'marker': {
+            'color': f'hsl(300, 85, {light})',
+        },
+        'hoverinfo': 'name',
+        'opacity': 1.0 if annotated else 0.5,
+        'name': error_id_str,
+    }
+
+    if annotated:
+        return_data['marker']['line'] = {
+            'color': 'black',
+            'width': 1.5,
+        }
+
+    if epochs is None:
+        return_data['x'] = [0]
+        return_data['y'] = [-1]
+        return_data['customdata'] = [error_idx]
+        return return_data
+
+    return_data['x'] = epochs
+    return_data['y'] = [1] * len(epochs)
+    return_data['customdata'] = [error_idx for _ in epochs] # one error id per point
+    return return_data
 
 
 # ---------- App Callbacks ---------- #
@@ -88,7 +106,7 @@ def update_dropdown_from_url(pathname):
     Output('session-picker', 'options'),
     [Input('url-update', 'pathname')],
 )
-def update_dropdown_options(pathname):
+def update_session_picker(pathname):
     '''populate session picker from db on page load.
     '''
     return get_training_sessions()
@@ -98,7 +116,7 @@ def update_dropdown_options(pathname):
     Output('url', 'pathname'),
     [Input('session-picker', 'value')]
 )
-def change_url(ses):
+def redirect_to_session_url(ses):
     '''update URL based on session picked in dropdown'''
     if ses is '/':
         raise PreventUpdate
@@ -112,27 +130,35 @@ def change_url(ses):
         Input('annotations-cache', 'data'),
         Input('errors-cache', 'data'),
     ],
-    [State({'type': 'error-msg', 'index': ALL}, 'style')],
+    [
+        State({'type': 'error-msg', 'index': ALL}, 'style'),
+    ],
 )
-def highlight_errors_from_annotations(annotations_cache, error_styles, errors_cache):
+def style_annotations_errors(annotations_cache, error_styles, errors_cache):
+    #TODO debug: args in wrong order ???
+    #TODO also could move errors-cache to state? not sure.
     for style in error_styles:
         style.pop('backgroundColor', None)
     if annotations_cache:
         for annotation in annotations_cache:
-            error_styles[annotation['error-index']]['backgroundColor'] = 'LightPink'
+            #TODO change color via HSL here? Or define in error msg?
+            error_styles[annotation['error-index']]['backgroundColor'] = 'hsl(300, 85%, 80%)'
     return error_styles
 
 
 @app.callback(
     Output('annotations-cache', 'data'),
     [
-        Input('errors-cache', 'data'),
         Input('btn-clear-annotations', 'n_clicks'),
         Input({'type': 'error-msg', 'index': ALL}, 'n_clicks'),
+        Input('timeline', 'clickData'),
     ],
-    [State('annotations-cache', 'data')],
+    [
+        State('annotations-cache', 'data'),
+        State('errors-cache', 'data'),
+    ],
 )
-def highlight_graph_for_error(error_msgs, clear_clicks, errors_clicks, annotations_cache):
+def update_annotations_cache(clear_clicks, errors_clicks, timeline_clickdata, annotations_cache, error_msgs):
     '''Update annotations state when an error message
     is clicked, or if the annotations are cleared.
     '''
@@ -144,17 +170,22 @@ def highlight_graph_for_error(error_msgs, clear_clicks, errors_clicks, annotatio
     trigger_id = trigger['prop_id'].split('.')[0]
     if not trigger['value'] or trigger_id == 'errors-cache':
         # Trigger malformed or was just a cache update
+        #TODO may have to handle errors cache update by storing error_id_strs instead of error_idx
         raise PreventUpdate
 
     # clear annotations button pressed, remove annotations
     if trigger_id == 'btn-clear-annotations':
         return []
 
-    # trigger_id is...probably... a dict of the error-msg id
-    trigger_id = eval(trigger_id)
-    trigger_idx = trigger_id['index']  # error-msg.id.index
+    if trigger_id == 'timeline':
+        # might be able to use 'curveNumber' instead of 'customdata' if always ordered
+        trigger_idx = trigger['value']['points'][0]['customdata']
+    else:
+        # trigger_id is...probably... a dict of the error-msg id
+        trigger_id = json.loads(trigger_id)
+        trigger_idx = trigger_id['index']  # error-msg.id.index
 
-    if not error_msgs[trigger_idx].get('epoch', False):
+    if not error_msgs[trigger_idx].get('epochs', False):
         # no annotations associated with the clicked error
         return annotations_cache
 
@@ -167,9 +198,9 @@ def highlight_graph_for_error(error_msgs, clear_clicks, errors_clicks, annotatio
     else:
         annotations_cache = []
     
-    clicked_error_annotation = {
+    clicked_error_annotation = {  # link error id to its annotations
         'error-index': trigger_idx,
-        'indices': list(set(error_msgs[trigger_idx]['epoch'])),
+        'indices': list(set(error_msgs[trigger_idx]['epochs'])),
     }
     annotations_cache.append(clicked_error_annotation)
 
@@ -181,7 +212,7 @@ def highlight_graph_for_error(error_msgs, clear_clicks, errors_clicks, annotatio
     [Input('interval-component', 'n_intervals'), Input('url', 'pathname')],
     [State('metrics-cache', 'data')],
 )
-def update_metrics_data(intervals, pathname, metrics_data):
+def query_metrics(intervals, pathname, metrics_data):
     '''handle updates to the metrics data'''
     if intervals is None or pathname is None:
         raise PreventUpdate
@@ -216,7 +247,7 @@ def update_metrics_data(intervals, pathname, metrics_data):
     [Input('interval-component', 'n_intervals'), Input('url', 'pathname')],
     [State('errors-cache', 'data')],
 )
-def update_errors_data(interval, pathname, errors_data):
+def query_errors(interval, pathname, errors_data):
     '''Updates the errors cache by making an API call
     '''
     if interval is None or pathname is None:
@@ -232,7 +263,7 @@ def update_errors_data(interval, pathname, errors_data):
             {'session_id': ObjectId(sess_id)},
             # omit object ids from results, not json friendly
             {'_id': 0, 'session_id': 0},
-        ).sort([('epoch', -1)]))  # sort by epoch descending (latest first)
+        ).sort([('epochs', -1)]))  # sort by epoch descending (latest first)
     except bson.errors.InvalidId:
         abort(400)
 
@@ -244,10 +275,41 @@ def update_errors_data(interval, pathname, errors_data):
 
 
 @app.callback(
+    Output('timeline', 'figure'),
+    [
+        Input('errors-cache', 'data'),
+        Input('annotations-cache', 'data'),
+    ],
+    [State('timeline', 'figure')],
+)
+def render_errors_viz(errors_data, annotations_data, figure):
+    '''Renders the error timeline visualization with error data
+    '''
+    if not errors_data:
+        raise PreventUpdate
+
+    annotation_idxs = []
+    if annotations_data:
+        annotation_idxs = set([a['error-index'] for a in annotations_data])
+
+    timeline_trace_data = []
+    for error_idx, error_spec in enumerate(errors_data):
+        timeline_trace_data.append(get_viz_trace_from_error(
+            error_spec['error_id_str'],
+            error_spec.get('epochs', None),
+            error_idx,
+            annotated=error_idx in annotation_idxs,
+        ))
+
+    figure['data'] = timeline_trace_data
+    return figure
+
+
+@app.callback(
     Output('errors-list', 'children'),
     [Input('errors-cache', 'data')],
 )
-def update_errors_list(errors_data):
+def render_errors_list(errors_data):
     '''Renders errors from errors cache changes.
     '''
     result_divs = []
@@ -260,7 +322,7 @@ def update_errors_list(errors_data):
 
     for i, error_spec in enumerate(errors_data):
         result_divs.append(ERROR_KEYS[error_spec['error_id_str']](
-            error_spec.get('epoch', None),
+            error_spec.get('epochs', None),
         ).render(
             {
                 'type': 'error-msg',
@@ -288,7 +350,7 @@ def update_loss(metrics_data, annotations_data):
     }
 
     if annotations_data:
-        for annotation in annotations_data:
+        for annotation in annotations_data:  # for every selected error
             for idx in annotation['indices']:
                 graph_figure['layout']['shapes'].append(
                     make_annotation_box_shape(idx)
@@ -313,7 +375,7 @@ def update_acc(metrics_data, annotations_data):
     }
 
     if annotations_data:
-        for annotation in annotations_data:
+        for annotation in annotations_data:  # for every selected error
             for idx in annotation['indices']:
                 graph_figure['layout']['shapes'].append(
                     make_annotation_box_shape(idx)

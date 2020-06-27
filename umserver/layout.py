@@ -10,15 +10,46 @@ app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     dcc.Location(id='url-update', refresh=False),
     html.Div([
-        html.H1('Umlaut Toolkit'),
+        html.H1('Umlaut Toolkit', style={'display': 'inline-block'}),
         dcc.Dropdown(
             id='session-picker',
+            placeholder='Named Sessions',
+            style={'width': 200, 'display': 'inline-block', 'float': 'right'},
         ),
-        html.Hr(),
+        dcc.Graph(
+            id='timeline',
+            config={
+                'displayModeBar': False,
+                'watermark': False,
+                'displaylogo': False,
+            },
+            figure={
+                'layout': {
+                    'height': 150,
+                    'barmode': 'relative',
+                    'hovermode': 'closest',
+                    'bargap': 0.05,
+                    'yaxis': {
+                        'showgrid': False,
+                        'zeroline': True,
+                        'showticklabels': False,
+                        'fixedrange': True,
+                    },
+                    'xaxis': {
+                        'rangemode': 'nonnegative',
+                        'fixedrange': True,
+                    },
+                    'margin': {
+                        't': 0,
+                        'b': 30,
+                    }
+                },
+                'data': [],
+            },
+        ),
     ]),
     html.Div([
             html.H3('Visualizations'),
-            html.Button(id='btn-clear-annotations', n_clicks=0, children='Clear Annotations'),
             dcc.Graph(
                 id='graph_loss',
                 figure={
@@ -35,7 +66,8 @@ app.layout = html.Div([
         className='five columns',
     ),
     html.Div([
-            html.H3('Error Messages'),
+            html.H3('Error Messages', style={'display': 'inline-block'}),
+            html.Button(id='btn-clear-annotations', children='Clear Annotations', style={'display': 'inline-block', 'float': 'right'}),
             html.Hr(),
             html.Div(id='errors-list'),
         ],

@@ -69,15 +69,15 @@ class UmlautClient:
         {
             error_id_str: {
                 annotations: [],  #TODO not yet used
-                epoch: [items pushed to list],
+                epochs: [items pushed to list],
             }
         }
         '''
         req_data = {}
         for error in filter(None, errors):
             req_data[error.id_str] = {
-                'epoch': error.epoch,
-                'annotations': error.annotations,
+                'epochs': error.epochs,
+                'annotations': error.get_annotations(),  #TODO remove this and make it a property
             }
         if req_data:
             r = requests.post(
