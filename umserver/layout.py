@@ -47,8 +47,6 @@ app.layout = html.Div([
                 'data': [],
             },
         ),
-        html.P(id='p_debug'),
-        html.P(id='p_debug_2'),
     ]),
     html.Div([
             html.H3('Visualizations'),

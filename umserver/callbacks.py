@@ -43,28 +43,36 @@ def make_annotation_box_shape(x1):
         'x1': x1,
         'y0': 0,
         'y1': 1,
-        'fillcolor': 'LightPink',
+        'fillcolor': 'hsl(300, 85, 80)',
         'opacity': 0.5,
         'layer': 'below',
         'line_width': 0,
     }
 
 
-def get_viz_trace_from_error(error_id_str, epochs, error_idx, color_hsl=None):
+def get_viz_trace_from_error(error_id_str, epochs, error_idx, annotated=False, color_hsl=None):
     '''Given an error object, return a viz plot trace for it.'''
+    light = min(70 + 10*error_idx, 90)
     return_data = {
         'type': 'bar',
         'marker': {
-            'color': f'hsl({random.randint(0, 359)}, 85, 60)',
+            'color': f'hsl(300, 85, {light})',
         },
         'hoverinfo': 'name',
-        'opacity': 0.5,
+        'opacity': 1.0 if annotated else 0.5,
         'name': error_id_str,
     }
+
+    if annotated:
+        return_data['marker']['line'] = {
+            'color': 'black',
+            'width': 1.5,
+        }
 
     if epochs is None:
         return_data['x'] = [0]
         return_data['y'] = [-1]
+        return_data['customdata'] = [error_idx]
         return return_data
 
     return_data['x'] = epochs
@@ -117,36 +125,24 @@ def redirect_to_session_url(ses):
 
 
 @app.callback(
-    Output('p_debug_2', 'children'),
-    [Input('timeline', 'restyleData')],
-)
-def write_debug_to_p2(data):
-    return str(data)
-
-
-@app.callback(
-    Output('p_debug', 'children'),
-    [Input('timeline', 'clickData')],
-)
-def write_debug_to_p(data):
-    return str(data)
-
-
-@app.callback(
     Output({'type': 'error-msg', 'index': ALL}, 'style'),
     [
         Input('annotations-cache', 'data'),
         Input('errors-cache', 'data'),
     ],
-    [State({'type': 'error-msg', 'index': ALL}, 'style')],
+    [
+        State({'type': 'error-msg', 'index': ALL}, 'style'),
+    ],
 )
 def style_annotations_errors(annotations_cache, error_styles, errors_cache):
+    #TODO debug: args in wrong order ???
+    #TODO also could move errors-cache to state? not sure.
     for style in error_styles:
         style.pop('backgroundColor', None)
     if annotations_cache:
         for annotation in annotations_cache:
             #TODO change color via HSL here? Or define in error msg?
-            error_styles[annotation['error-index']]['backgroundColor'] = 'LightPink'
+            error_styles[annotation['error-index']]['backgroundColor'] = 'hsl(300, 85%, 80%)'
     return error_styles
 
 
@@ -162,7 +158,7 @@ def style_annotations_errors(annotations_cache, error_styles, errors_cache):
         State('errors-cache', 'data'),
     ],
 )
-def select_annotations(clear_clicks, errors_clicks, timeline_clickdata, annotations_cache, error_msgs):
+def update_annotations_cache(clear_clicks, errors_clicks, timeline_clickdata, annotations_cache, error_msgs):
     '''Update annotations state when an error message
     is clicked, or if the annotations are cleared.
     '''
@@ -174,6 +170,7 @@ def select_annotations(clear_clicks, errors_clicks, timeline_clickdata, annotati
     trigger_id = trigger['prop_id'].split('.')[0]
     if not trigger['value'] or trigger_id == 'errors-cache':
         # Trigger malformed or was just a cache update
+        #TODO may have to handle errors cache update by storing error_id_strs instead of error_idx
         raise PreventUpdate
 
     # clear annotations button pressed, remove annotations
@@ -203,7 +200,7 @@ def select_annotations(clear_clicks, errors_clicks, timeline_clickdata, annotati
     
     clicked_error_annotation = {  # link error id to its annotations
         'error-index': trigger_idx,
-        'indices': list(set(error_msgs[trigger_idx]['epochs'])),  #TODO refactor to epochs
+        'indices': list(set(error_msgs[trigger_idx]['epochs'])),
     }
     annotations_cache.append(clicked_error_annotation)
 
@@ -279,24 +276,29 @@ def query_errors(interval, pathname, errors_data):
 
 @app.callback(
     Output('timeline', 'figure'),
-    [Input('errors-cache', 'data')],  # will need to listen to annotations cache too
+    [
+        Input('errors-cache', 'data'),
+        Input('annotations-cache', 'data'),
+    ],
     [State('timeline', 'figure')],
 )
-def render_errors_viz(errors_data, figure):
+def render_errors_viz(errors_data, annotations_data, figure):
     '''Renders the error timeline visualization with error data
     '''
     if not errors_data:
         raise PreventUpdate
 
-    print(errors_data)
+    annotation_idxs = []
+    if annotations_data:
+        annotation_idxs = set([a['error-index'] for a in annotations_data])
 
     timeline_trace_data = []
-
-    for i, error_spec in enumerate(errors_data):
+    for error_idx, error_spec in enumerate(errors_data):
         timeline_trace_data.append(get_viz_trace_from_error(
             error_spec['error_id_str'],
             error_spec.get('epochs', None),
-            i,
+            error_idx,
+            annotated=error_idx in annotation_idxs,
         ))
 
     figure['data'] = timeline_trace_data
@@ -320,7 +322,7 @@ def render_errors_list(errors_data):
 
     for i, error_spec in enumerate(errors_data):
         result_divs.append(ERROR_KEYS[error_spec['error_id_str']](
-            error_spec.get('epochs', None),  #TODO need to refactor to 'epochs'
+            error_spec.get('epochs', None),
         ).render(
             {
                 'type': 'error-msg',
