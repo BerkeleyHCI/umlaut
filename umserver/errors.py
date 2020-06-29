@@ -31,6 +31,15 @@ class BaseErrorMessage:
             error_fmt.append(html.Small('Captured before start of training.'))
         else:
             error_fmt.append(html.Small(f'Captured at epochs {self.epochs}.'))
+
+        error_fmt.append(html.Button([
+            html.Img(
+                src='https://cdn.sstatic.net/Sites/stackoverflow/company/Img/logos/so/so-icon.svg',
+                height='15px',
+                style={'paddingRight': '5px;'},
+            ),
+            html.Small('Search Stack Overflow'),
+        ]))
         error_fmt.append(html.Hr())
 
         return html.Div(
