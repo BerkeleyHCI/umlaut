@@ -27,7 +27,7 @@ class BaseErrorMessage:
 
     def get_context_subtitle(self):
         if self.remarks:
-            return self.subtitle.format(remarks)
+            return self.subtitle.format(self.remarks)
         elif '{' in self.subtitle:
             return self.subtitle.format('')
         return self.subtitle
@@ -42,7 +42,9 @@ class BaseErrorMessage:
         'error-msg-btn-annotate' which are used by callbacks.
         '''
         error_fmt = [
-            html.H3(self.title),
+            # daq.Indicator(value=True, style={'display': 'inline-block', 'paddingRight': '1rem', 'paddingBottom': '0.4rem'}),
+            html.Span(id={'type': 'error-msg-indicator', 'index': error_index}, style={'backgroundColor': get_error_color(error_index), 'borderRadius': '50%', 'height': '15px', 'width': '15px', 'marginRight': '5px', 'display': 'inline-block'}),
+            html.H3(self.title, style={'display': 'inline-block'}),
             dcc.Markdown(self.get_context_subtitle()),
             html.H4('Solution'),
             dcc.Markdown(self.description),
@@ -53,20 +55,13 @@ class BaseErrorMessage:
             error_fmt.append(html.Small(f'Captured at epochs {self.epochs}.'))
 
         error_fmt.append(html.Br())
-        error_fmt.append(html.Button(
-            'Show Relevant Plot Data',
-            id={'type': 'error-msg-btn-annotate', 'index': error_index},
-            style={'marginTop': '1.2rem', 'marginBottom': '1rem', 'paddingLeft': '5px', 'paddingRight': '5px', 'clear': 'left', 'display': 'inline-block'},
-        ))
-        
-        error_fmt.append(html.Br())
         if self._so_query:
             error_fmt.append(html.A(
                 [
                     html.Img(
                         src='https://cdn.sstatic.net/Sites/stackoverflow/company/Img/logos/so/so-icon.svg',
                         height='15px',
-                        style={'paddingRight': '5px', 'margin-bottom': '-3px'},
+                        style={'paddingTop': '1.2rem', 'paddingRight': '5px', 'margin-bottom': '-3px'},
                     ),
                         'Search Stack Overflow',
                 ],
@@ -120,11 +115,6 @@ class InputNotNormalizedError(BaseErrorMessage):
         'For image data, (pixels ranging from 0-255), a typical way to normalize the pixel values to the range of -1 to 1 is',
         '`training_images = (training_images / 128.0) - 1`',
     ]
-    # def __init__(self, epochs, remarks):
-    #     super().__init__(epochs, remarks)
-    #     if remarks:
-    #         remarks = '(' + remarks + ')'
-    #     self.subtitle = InputNotNormalizedError.subtitle.format(remarks)
     
 
 class InputNotFloatingError(BaseErrorMessage):

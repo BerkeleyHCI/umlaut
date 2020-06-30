@@ -125,24 +125,24 @@ def redirect_to_session_url(ses):
 
 
 @app.callback(
-    Output({'type': 'error-msg-btn-annotate', 'index': ALL}, 'style'),
+    Output({'type': 'error-msg-indicator', 'index': ALL}, 'style'),
     [
         Input('annotations-cache', 'data'),
         Input('errors-cache', 'data'),
     ],
     [
-        State({'type': 'error-msg-btn-annotate', 'index': ALL}, 'style'),
+        State({'type': 'error-msg-indicator', 'index': ALL}, 'style'),
     ],
 )
-def style_annotations_errors(annotations_cache, errors_cache, error_styles):
-    #TODO debug: args in wrong order ???
-    #TODO also could move errors-cache to state? not sure.
-    for style in error_styles:
-        style.pop('backgroundColor', None)
+def style_error_indicators(annotations_cache, errors_cache, indicator_styles):
+    for style in indicator_styles:
+        style.pop('border', None)
+        style['opacity'] = 0.5  # deselected
     if annotations_cache:
         for annotation in annotations_cache:
-            error_styles[annotation['error-index']]['backgroundColor'] = get_error_color(annotation['error-index'])
-    return error_styles
+            indicator_styles[annotation['error-index']]['opacity'] = 1.0
+            indicator_styles[annotation['error-index']]['border'] = '2px solid #333'
+    return indicator_styles
 
 
 @app.callback(
@@ -322,7 +322,8 @@ def render_errors_list(errors_data):
 
     for i, error_spec in enumerate(errors_data):
         result_divs.append(ERROR_KEYS[error_spec['error_id_str']](
-            error_spec.get('epochs', None),
+            error_spec['epochs'],
+            error_spec.get('remarks', ''),
         ).render(i))
 
     return result_divs
