@@ -1,5 +1,6 @@
 import dash_core_components as dcc
 import dash_html_components as html
+from urllib import parse
 
 
 def get_error_color(error_idx):
@@ -41,16 +42,39 @@ class BaseErrorMessage:
         error_fmt.append(html.Button(
             'Show Relevant Plot Data',
             id={'type': 'error-msg-btn-annotate', 'index': error_index},
-            style={'marginTop': '1.5em', 'paddingLeft': '5px', 'paddingRight': '5px', 'clear': 'left', 'display': 'inline-block'},
+            style={'marginTop': '1.2rem', 'marginBottom': '1rem', 'paddingLeft': '5px', 'paddingRight': '5px', 'clear': 'left', 'display': 'inline-block'},
         ))
-        error_fmt.append(html.Button([
-            html.Img(
-                src='https://cdn.sstatic.net/Sites/stackoverflow/company/Img/logos/so/so-icon.svg',
-                height='15px',
-                style={'paddingRight': '5px', 'margin-bottom': '-3px'},
+        
+        error_fmt.append(html.Br())
+        error_fmt.append(html.A(
+            [
+                html.Img(
+                    src='https://cdn.sstatic.net/Sites/stackoverflow/company/Img/logos/so/so-icon.svg',
+                    height='15px',
+                    style={'paddingRight': '5px', 'margin-bottom': '-3px'},
+                ),
+                    'Search Stack Overflow',
+            ],
+            href='https://stackoverflow.com/search?{}'.format(
+                parse.urlencode({'q': '[keras] overfitting'}),
             ),
-            'Search Stack Overflow',
-        ], style={'paddingLeft': '5px', 'paddingRight': '5px'}))
+            target='_blank',
+            style={'paddingRight': '1rem'},
+        ))
+        error_fmt.append(html.A(
+            [
+                html.Img(
+                    src='https://upload.wikimedia.org/wikipedia/commons/2/2d/Tensorflow_logo.svg',
+                    height='15px',
+                    style={'paddingRight': '5px', 'margin-bottom': '-3px'},
+                ),
+                    'Search Docs',
+            ],
+            href='https://www.tensorflow.org/s/results?{}'.format(
+                parse.urlencode({'q': 'keras losses'}),
+            ),
+            target='_blank',
+        ))
         error_fmt.append(html.Hr())
 
         return html.Div(
