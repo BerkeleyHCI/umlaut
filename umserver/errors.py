@@ -100,7 +100,7 @@ class BaseErrorMessage:
     def __init__(self, epochs, remarks=None, *args, **kwargs):
         self.epochs = epochs
         self.remarks = remarks
-        if epochs and type(self.epochs) is not list:
+        if epochs is not None and type(self.epochs) is not list:
             self.epochs = [epochs]
 
     def __str__(self):
