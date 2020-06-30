@@ -100,7 +100,7 @@ class BaseErrorMessage:
     def __init__(self, epochs, remarks=None, *args, **kwargs):
         self.epochs = epochs
         self.remarks = remarks
-        if type(self.epochs) is not list:
+        if epochs and type(self.epochs) is not list:
             self.epochs = [epochs]
 
     def __str__(self):
@@ -163,8 +163,9 @@ class NoSoftmaxActivationError(BaseErrorMessage):
     def get_annotations(self):
         return None  # static check, no annotations
 
-    def __init__(self, *args, **kwargs):
-        self.epochs = None
+    def __init__(self, remarks='', *args, **kwargs):
+        # set epochs to None
+        super().__init__(self, None, remarks=remarks)
 
 
 class OverfittingError(BaseErrorMessage):
