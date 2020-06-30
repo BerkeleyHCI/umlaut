@@ -285,7 +285,8 @@ def render_errors_viz(errors_data, annotations_data, figure):
     '''Renders the error timeline visualization with error data
     '''
     if not errors_data:
-        raise PreventUpdate
+        figure['data'] = []
+        return figure
 
     annotation_idxs = []
     if annotations_data:
