@@ -165,7 +165,8 @@ class NoSoftmaxActivationError(BaseErrorMessage):
 
     def __init__(self, remarks='', *args, **kwargs):
         # set epochs to None
-        super().__init__(self, None, remarks)
+        self.epochs = None
+        self.remarks = remarks
 
 
 class OverfittingError(BaseErrorMessage):
