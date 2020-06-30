@@ -91,6 +91,8 @@ def update_session_errors(sess_id):
                 # $each to iterate through list
                 'epochs': {'$each': errors[error_id]['epochs']},
             }
+        if errors[error_id].get('remarks', False):
+            error_obj['$set'].update({'remarks': errors[error_id]['remarks']})
         db.errors.find_one_and_update(
             {'error_id_str': error_id, 'session_id': sess_id},
             error_obj,
