@@ -59,7 +59,7 @@ def get_viz_trace_from_error(error_id_str, epochs, error_idx, annotated=False):
             'color': get_error_color(error_idx),
         },
         'hoverinfo': 'name',
-        'opacity': 1.0 if annotated else 0.8,
+        'opacity': 1.0 if annotated else 0.9,
         'name': error_id_str,
     }
 
@@ -134,7 +134,7 @@ def redirect_to_session_url(ses):
         State({'type': 'error-msg-btn-annotate', 'index': ALL}, 'style'),
     ],
 )
-def style_annotations_errors(annotations_cache, error_styles, errors_cache):
+def style_annotations_errors(annotations_cache, errors_cache, error_styles):
     #TODO debug: args in wrong order ???
     #TODO also could move errors-cache to state? not sure.
     for style in error_styles:
