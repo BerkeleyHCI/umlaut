@@ -84,7 +84,3 @@ def check_high_validation_acc(epoch, logs):
 
 def check_initialization(epoch, model, logs):
     NotImplemented
-
-
-def check_increasing_graph_size(epoch, model):
-    NotImplemented
