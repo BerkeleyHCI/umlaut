@@ -149,7 +149,7 @@ def style_annotations_errors(annotations_cache, errors_cache, error_styles):
     Output('annotations-cache', 'data'),
     [
         Input('btn-clear-annotations', 'n_clicks'),
-        Input({'type': 'error-msg-btn-annotate', 'index': ALL}, 'n_clicks'),
+        Input({'type': 'error-msg', 'index': ALL}, 'n_clicks'),
         Input('timeline', 'clickData'),
     ],
     [
