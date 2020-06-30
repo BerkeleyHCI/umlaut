@@ -19,16 +19,16 @@ def run_epoch_heuristics(epoch, model, logs, x_train):
     return errors_raised
 
 
-def check_input_normalization(epoch, x_train, bounds=(-1, 1)):
+def check_input_normalization(epoch, x_train):
     '''Returns an `InputNotNormalizedError` if inputs exceed bounds.
     '''
     x_min = np.min(x_train)
     x_max = np.max(x_train)
     remark = ''
-    if x_min < bounds[0]:
-        remark = remark + f'Model input is {x_min}, below the typical value of {bounds[0]}.'
-    if x_max > bounds[1]:
-        remark = remark + f'Model input is {x_max}, greater than the typical value of {bounds[1]}.'
+    if x_min < -1:
+        remark = remark + f' The minimum input value is {x_min}, less than the typical value of -1.'
+    if x_max > 1:
+        remark = remark + f' The maximum input value is {x_max}, greater than the typical value of 1.'
     if remark:
         return umlaut.errors.InputNotNormalizedError(epoch, remark)
 
@@ -83,8 +83,4 @@ def check_high_validation_acc(epoch, logs):
 
 
 def check_initialization(epoch, model, logs):
-    NotImplemented
-
-
-def check_increasing_graph_size(epoch, model):
     NotImplemented

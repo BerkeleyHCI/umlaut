@@ -68,8 +68,8 @@ class UmlautClient:
         Data format is:
         {
             error_id_str: {
-                annotations: [],  #TODO not yet used
                 epochs: [items pushed to list],
+                remarks: 'String with remarks from last run',
             }
         }
         '''
@@ -77,7 +77,7 @@ class UmlautClient:
         for error in filter(None, errors):
             req_data[error.id_str] = {
                 'epochs': error.epochs,
-                'annotations': error.get_annotations(),  #TODO remove this and make it a property
+                'remarks': error.remarks,
             }
         if req_data:
             r = requests.post(
