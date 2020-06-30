@@ -14,6 +14,7 @@ from flask import request
 
 from umserver import app
 from umserver.errors import ERROR_KEYS
+from umserver.errors import get_error_color
 from umserver.helpers import argmax, index_of_dict
 from umserver.models import db
 from umserver.models import get_training_sessions
@@ -34,7 +35,7 @@ def get_go_data_from_metrics(plot, metrics_data):
     ]
 
 
-def make_annotation_box_shape(x1):
+def make_annotation_box_shape(x1, error_idx):
     return {
         'type': 'rect',
         'xref': 'x',
@@ -43,23 +44,22 @@ def make_annotation_box_shape(x1):
         'x1': x1,
         'y0': 0,
         'y1': 1,
-        'fillcolor': 'hsl(300, 85, 80)',
+        'fillcolor': get_error_color(error_idx),
         'opacity': 0.5,
         'layer': 'below',
         'line_width': 0,
     }
 
 
-def get_viz_trace_from_error(error_id_str, epochs, error_idx, annotated=False, color_hsl=None):
+def get_viz_trace_from_error(error_id_str, epochs, error_idx, annotated=False):
     '''Given an error object, return a viz plot trace for it.'''
-    light = min(70 + 10*error_idx, 90)
     return_data = {
         'type': 'bar',
         'marker': {
-            'color': f'hsl(300, 85, {light})',
+            'color': get_error_color(error_idx),
         },
         'hoverinfo': 'name',
-        'opacity': 1.0 if annotated else 0.5,
+        'opacity': 1.0 if annotated else 0.8,
         'name': error_id_str,
     }
 
@@ -125,13 +125,13 @@ def redirect_to_session_url(ses):
 
 
 @app.callback(
-    Output({'type': 'error-msg', 'index': ALL}, 'style'),
+    Output({'type': 'error-msg-btn-annotate', 'index': ALL}, 'style'),
     [
         Input('annotations-cache', 'data'),
         Input('errors-cache', 'data'),
     ],
     [
-        State({'type': 'error-msg', 'index': ALL}, 'style'),
+        State({'type': 'error-msg-btn-annotate', 'index': ALL}, 'style'),
     ],
 )
 def style_annotations_errors(annotations_cache, error_styles, errors_cache):
@@ -141,8 +141,7 @@ def style_annotations_errors(annotations_cache, error_styles, errors_cache):
         style.pop('backgroundColor', None)
     if annotations_cache:
         for annotation in annotations_cache:
-            #TODO change color via HSL here? Or define in error msg?
-            error_styles[annotation['error-index']]['backgroundColor'] = 'hsl(300, 85%, 80%)'
+            error_styles[annotation['error-index']]['backgroundColor'] = get_error_color(annotation['error-index'])
     return error_styles
 
 
@@ -150,7 +149,7 @@ def style_annotations_errors(annotations_cache, error_styles, errors_cache):
     Output('annotations-cache', 'data'),
     [
         Input('btn-clear-annotations', 'n_clicks'),
-        Input({'type': 'error-msg', 'index': ALL}, 'n_clicks'),
+        Input({'type': 'error-msg-btn-annotate', 'index': ALL}, 'n_clicks'),
         Input('timeline', 'clickData'),
     ],
     [
@@ -185,10 +184,6 @@ def update_annotations_cache(clear_clicks, errors_clicks, timeline_clickdata, an
         trigger_id = json.loads(trigger_id)
         trigger_idx = trigger_id['index']  # error-msg.id.index
 
-    if not error_msgs[trigger_idx].get('epochs', False):
-        # no annotations associated with the clicked error
-        return annotations_cache
-
     # if this error msg is already in annotations, pop it
     if annotations_cache:
         annotations_error_idx = index_of_dict(annotations_cache, 'error-index', trigger_idx)
@@ -200,8 +195,12 @@ def update_annotations_cache(clear_clicks, errors_clicks, timeline_clickdata, an
     
     clicked_error_annotation = {  # link error id to its annotations
         'error-index': trigger_idx,
-        'indices': list(set(error_msgs[trigger_idx]['epochs'])),
     }
+
+    if error_msgs[trigger_idx]['epochs'] is not None:
+        # not a static check, and has graph annotations. in the future this could be a different field.
+        clicked_error_annotation['indices'] = list(set(error_msgs[trigger_idx]['epochs']))
+
     annotations_cache.append(clicked_error_annotation)
 
     return annotations_cache
@@ -323,12 +322,7 @@ def render_errors_list(errors_data):
     for i, error_spec in enumerate(errors_data):
         result_divs.append(ERROR_KEYS[error_spec['error_id_str']](
             error_spec.get('epochs', None),
-        ).render(
-            {
-                'type': 'error-msg',
-                'index': i,
-            },
-        ))
+        ).render(i))
 
     return result_divs
 
@@ -351,9 +345,11 @@ def update_loss(metrics_data, annotations_data):
 
     if annotations_data:
         for annotation in annotations_data:  # for every selected error
+            if 'indices' not in annotation:
+                continue  # ignore static checks (no indices)
             for idx in annotation['indices']:
                 graph_figure['layout']['shapes'].append(
-                    make_annotation_box_shape(idx)
+                    make_annotation_box_shape(idx, annotation['error-index'])
                 )
 
     return graph_figure
@@ -366,6 +362,7 @@ def update_loss(metrics_data, annotations_data):
 def update_acc(metrics_data, annotations_data):
     if not metrics_data:
         return {}
+
     graph_figure = {
         'layout': {
             'title': 'Accuracy over epochs',
@@ -376,9 +373,11 @@ def update_acc(metrics_data, annotations_data):
 
     if annotations_data:
         for annotation in annotations_data:  # for every selected error
+            if 'indices' not in annotation:
+                continue  # ignore static checks (no indices)
             for idx in annotation['indices']:
                 graph_figure['layout']['shapes'].append(
-                    make_annotation_box_shape(idx)
+                    make_annotation_box_shape(idx, annotation['error-index'])
                 )
 
     return graph_figure

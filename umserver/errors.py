@@ -2,6 +2,11 @@ import dash_core_components as dcc
 import dash_html_components as html
 
 
+def get_error_color(error_idx):
+    '''Make a qualitative color range for 4 colors (90 degrees)'''
+    return f'hsl({(25 + 90*error_idx) % 360}, 95%, 80%)'
+
+
 class BaseErrorMessage:
     title = 'Base Error Message'
     subtitle = 'Override me.'
@@ -20,7 +25,7 @@ class BaseErrorMessage:
     def get_annotations(self):
         return [(e - 1, e) for e in self.epochs]
 
-    def render(self, id_in):
+    def render(self, error_index):
         error_fmt = [
             html.H3(self.title),
             dcc.Markdown(self.subtitle),
@@ -32,19 +37,25 @@ class BaseErrorMessage:
         else:
             error_fmt.append(html.Small(f'Captured at epochs {self.epochs}.'))
 
+        error_fmt.append(html.Br())
+        error_fmt.append(html.Button(
+            'Show Relevant Plot Data',
+            id={'type': 'error-msg-btn-annotate', 'index': error_index},
+            style={'marginTop': '1.5em', 'paddingLeft': '5px', 'paddingRight': '5px', 'clear': 'left', 'display': 'inline-block'},
+        ))
         error_fmt.append(html.Button([
             html.Img(
                 src='https://cdn.sstatic.net/Sites/stackoverflow/company/Img/logos/so/so-icon.svg',
                 height='15px',
-                style={'paddingRight': '5px;'},
+                style={'paddingRight': '5px', 'margin-bottom': '-3px'},
             ),
-            html.Small('Search Stack Overflow'),
-        ]))
+            'Search Stack Overflow',
+        ], style={'paddingLeft': '5px', 'paddingRight': '5px'}))
         error_fmt.append(html.Hr())
 
         return html.Div(
             error_fmt,
-            id=id_in,
+            id={'type': 'error-msg', 'index': error_index},
             style={'cursor': 'pointer', 'display': 'inline-block'},
         )
 

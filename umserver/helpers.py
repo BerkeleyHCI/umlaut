@@ -9,7 +9,8 @@ def filter_for_dict(l, k, v):
 
 
 def index_of_dict(l, k, v):
+    '''return the index of l where l[i] has a dict which has (k, v)'''
     for i, d in enumerate(l):
-        if d[k] == v:
+        if k in d and d[k] == v:
             return i
     return None
