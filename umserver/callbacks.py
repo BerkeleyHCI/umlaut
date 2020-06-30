@@ -138,10 +138,14 @@ def style_error_indicators(annotations_cache, errors_cache, indicator_styles):
     for style in indicator_styles:
         style.pop('border', None)
         style['opacity'] = 0.5  # deselected
+        style['width'] = '16px'
+        style['height'] = '16px'
     if annotations_cache:
         for annotation in annotations_cache:
             indicator_styles[annotation['error-index']]['opacity'] = 1.0
             indicator_styles[annotation['error-index']]['border'] = '2px solid #333'
+            indicator_styles[annotation['error-index']]['width'] = '12px'
+            indicator_styles[annotation['error-index']]['height'] = '12px'
     return indicator_styles
 
 

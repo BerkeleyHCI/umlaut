@@ -43,7 +43,12 @@ class BaseErrorMessage:
         '''
         error_fmt = [
             # daq.Indicator(value=True, style={'display': 'inline-block', 'paddingRight': '1rem', 'paddingBottom': '0.4rem'}),
-            html.Span(id={'type': 'error-msg-indicator', 'index': error_index}, style={'backgroundColor': get_error_color(error_index), 'borderRadius': '50%', 'height': '15px', 'width': '15px', 'marginRight': '5px', 'display': 'inline-block'}),
+            html.Span(id={'type': 'error-msg-indicator', 'index': error_index}, style={
+                'backgroundColor': get_error_color(error_index),
+                'borderRadius': '50%',
+                'marginRight': '5px',
+                'display': 'inline-block',
+            }),
             html.H3(self.title, style={'display': 'inline-block'}),
             dcc.Markdown(self.get_context_subtitle()),
             html.H4('Solution'),
