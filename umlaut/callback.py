@@ -55,7 +55,9 @@ class UmlautCallback(tf.keras.callbacks.Callback):
         loss_type = type(self.model.loss)
         random_logits = None
         if loss_type == tf.keras.losses.CategoricalCrossentropy or loss_type == tf.keras.losses.CategoricalCrossentropy or loss_type == SparseCategoricalCrossentropy:
-            random_logits = tf.ones_like(output_node) * tf.math.log(1/tf.shape(self.output_node)[-1])
+            random_class = tf.random.uniform(tf.shape(output_node)[:-1]. min_val=0, maxval=tf.shape(output_node)[-1], dtype=tf.int32)
+            random_one_hot = tf.one_hot(random_class, depth=tf.shape(output_node)[-1])
+            random_logits = random_one_hot * tf.math.log(0.99) + 1 - random_one_hot * tf.math.log(0.01)
 
         if loss_type == tf.keras.losses.BinaryCrossentropy:
             random_logits = tf.ones_like(output_node) * tf.math.log(0.5)
