@@ -54,17 +54,18 @@ class UmlautCallback(tf.keras.callbacks.Callback):
     def compute_naive_loss(self):
         loss_type = type(self.model.loss)
         random_logits = None
-        if loss_type == tf.keras.losses.CategoricalCrossentropy or loss_type == tf.keras.losses.CategoricalCrossentropy or loss_type == SparseCategoricalCrossentropy:
-            random_logits = tf.ones_like(output_node) * tf.math.log(1/tf.shape(self.output_node)[-1])
+        if loss_type == tf.keras.losses.CategoricalCrossentropy or loss_type == tf.keras.losses.SparseCategoricalCrossentropy:
+            random_logits = tf.ones_like(self.output_node) * tf.cast(tf.math.log(1/tf.shape(self.output_node)[-1]), tf.float32)
 
         if loss_type == tf.keras.losses.BinaryCrossentropy:
-            random_logits = tf.ones_like(output_node) * tf.math.log(0.5)
+            random_logits = tf.ones_like(self.output_node) * tf.cast(tf.math.log(0.5), tf.float32)
         
-        if loss_type == tf.kears.losses.MeanAbsoluteError or loss_type == tf.kears.losses.MeanSquaredError:
-            random_logits = tf.ones_like(output_node) * tf.reduce_mean(self.label_node)
+        if loss_type == tf.keras.losses.MeanAbsoluteError or loss_type == tf.keras.losses.MeanSquaredError:
+            random_logits = tf.ones_like(self.output_node) * tf.reduce_mean(self.label_node, dtype=tf.float32)
         
-        if random_logits:
-            return self.model.loss(random_logits, self.label_node)
+        if random_logits is not None:
+            n = K.eval(tf.reduce_sum(tf.nn.softmax(self.output_node) * tf.one_hot(tf.squeeze(tf.cast(self.label_node, tf.int32)), 10), axis=-1))
+            return K.eval(self.model.loss(self.label_node, random_logits))
         else:
             return None
     def on_train_begin(self, logs=None):
@@ -83,14 +84,14 @@ class UmlautCallback(tf.keras.callbacks.Callback):
         model_input = K.eval(self.input_node)
         print('Computing Naive Loss...')
         print(self.compute_naive_loss())
+        labels = K.eval(self.label_node)
+        print('Labels...')
+        print(labels)
         #errors = run_epoch_heuristics(batch, self.model, logs, model_input)
         #print(list(filter(None, errors)) or 'No errors!')
         errors = None
         if errors and self.umlaut_client:
             self.umlaut_client.send_errors(errors)
-
-        labels = K.eval(self.label_node)
-        print(labels, labels.shape, self.model.loss)
 
 
     def register_model(self, model):
