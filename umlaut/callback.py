@@ -51,6 +51,22 @@ class UmlautCallback(tf.keras.callbacks.Callback):
             return x
         return label_metric
 
+    def compute_naive_loss(self):
+        loss_type = type(self.model.loss)
+        random_logits = None
+        if loss_type == tf.keras.losses.CategoricalCrossentropy or loss_type == tf.keras.losses.CategoricalCrossentropy or loss_type == SparseCategoricalCrossentropy:
+            random_logits = tf.ones_like(output_node) * tf.math.log(1/tf.shape(self.output_node)[-1])
+
+        if loss_type == tf.keras.losses.BinaryCrossentropy:
+            random_logits = tf.ones_like(output_node) * tf.math.log(0.5)
+        
+        if loss_type == tf.kears.losses.MeanAbsoluteError or loss_type == tf.kears.losses.MeanSquaredError:
+            random_logits = tf.ones_like(output_node) * tf.reduce_mean(self.label_node)
+        
+        if random_logits:
+            return self.model.loss(random_logits, self.label_node)
+        else:
+            return None
     def on_train_begin(self, logs=None):
         #errors = run_pretrain_heuristics(self.model)
         print(list(filter(None, errors)) or 'No pretrain errors!')
@@ -64,6 +80,8 @@ class UmlautCallback(tf.keras.callbacks.Callback):
 
         print('Running Umlaut checks...')
         model_input = K.eval(self.input_node)
+        print('Computing Naive Loss...')
+        print(self.compute_naive_loss())
         #errors = run_epoch_heuristics(batch, self.model, logs, model_input)
         print(list(filter(None, errors)) or 'No errors!')
         if errors and self.umlaut_client:
