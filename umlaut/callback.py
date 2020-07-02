@@ -44,7 +44,7 @@ class UmlautCallback(tf.keras.callbacks.Callback):
             self.umlaut_client = UmlautClient(session_name, host)
 
     def get_label_metric_fn(self):
-        def label_metric(y_pred, y_true):
+        def label_metric(y_true, y_label):
             label_assign = self.label_node.assign(tf.cast(y_true, K.floatx()))  # pylint: disable=no-member
             with tf.control_dependencies([label_assign]):
                 x = tf.constant(0)
@@ -69,7 +69,8 @@ class UmlautCallback(tf.keras.callbacks.Callback):
             return None
     def on_train_begin(self, logs=None):
         #errors = run_pretrain_heuristics(self.model)
-        print(list(filter(None, errors)) or 'No pretrain errors!')
+        #print(list(filter(None, errors)) or 'No pretrain errors!')
+        errors = None
         if errors and self.umlaut_client:
             self.umlaut_client.send_errors(errors)
 
@@ -83,12 +84,13 @@ class UmlautCallback(tf.keras.callbacks.Callback):
         print('Computing Naive Loss...')
         print(self.compute_naive_loss())
         #errors = run_epoch_heuristics(batch, self.model, logs, model_input)
-        print(list(filter(None, errors)) or 'No errors!')
+        #print(list(filter(None, errors)) or 'No errors!')
+        errors = None
         if errors and self.umlaut_client:
             self.umlaut_client.send_errors(errors)
 
         labels = K.eval(self.label_node)
-        print(labels)
+        print(labels, labels.shape, self.model.loss)
 
 
     def register_model(self, model):
