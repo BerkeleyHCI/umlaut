@@ -44,7 +44,7 @@ class UmlautCallback(tf.keras.callbacks.Callback):
             self.umlaut_client = UmlautClient(session_name, host)
 
     def get_label_metric_fn(self):
-        def label_metric(y_pred, y_true):
+        def label_metric(y_true, y_label):
             label_assign = self.label_node.assign(tf.cast(y_true, K.floatx()))  # pylint: disable=no-member
             with tf.control_dependencies([label_assign]):
                 x = tf.constant(0)
@@ -57,21 +57,24 @@ class UmlautCallback(tf.keras.callbacks.Callback):
         if loss_type == tf.keras.losses.CategoricalCrossentropy or loss_type == tf.keras.losses.CategoricalCrossentropy or loss_type == SparseCategoricalCrossentropy:
             random_class = tf.random.uniform(tf.shape(output_node)[:-1]. min_val=0, maxval=tf.shape(output_node)[-1], dtype=tf.int32)
             random_one_hot = tf.one_hot(random_class, depth=tf.shape(output_node)[-1])
-            random_logits = random_one_hot * tf.math.log(0.99) + 1 - random_one_hot * tf.math.log(0.01)
+            random_logits = tf.cast(random_one_hot, tf.float32) * tf.math.log(0.99) + tf.cast(1 - random_one_hot, tf.float32) * tf.math.log(0.01)
 
         if loss_type == tf.keras.losses.BinaryCrossentropy:
-            random_logits = tf.ones_like(output_node) * tf.math.log(0.5)
+            random_class = tf.random.uniform(tf.shape(output_node). min_val=0, maxval=2, dtype=tf.int32)
+            random_logits = tf.cast(random_class, tf.float32) * tf.math.log(0.99) + tf.cast(1 - random_class. tf.float32) * tf.math.log(0.01)
         
-        if loss_type == tf.kears.losses.MeanAbsoluteError or loss_type == tf.kears.losses.MeanSquaredError:
-            random_logits = tf.ones_like(output_node) * tf.reduce_mean(self.label_node)
+        if loss_type == tf.keras.losses.MeanAbsoluteError or loss_type == tf.keras.losses.MeanSquaredError:
+            random_logits = tf.ones_like(self.output_node) * tf.reduce_mean(self.label_node, dtype=tf.float32)
         
-        if random_logits:
-            return self.model.loss(random_logits, self.label_node)
+        if random_logits is not None:
+            n = K.eval(tf.reduce_sum(tf.nn.softmax(self.output_node) * tf.one_hot(tf.squeeze(tf.cast(self.label_node, tf.int32)), 10), axis=-1))
+            return K.eval(self.model.loss(self.label_node, random_logits))
         else:
             return None
     def on_train_begin(self, logs=None):
         #errors = run_pretrain_heuristics(self.model)
-        print(list(filter(None, errors)) or 'No pretrain errors!')
+        #print(list(filter(None, errors)) or 'No pretrain errors!')
+        errors = None
         if errors and self.umlaut_client:
             self.umlaut_client.send_errors(errors)
 
@@ -84,13 +87,14 @@ class UmlautCallback(tf.keras.callbacks.Callback):
         model_input = K.eval(self.input_node)
         print('Computing Naive Loss...')
         print(self.compute_naive_loss())
+        labels = K.eval(self.label_node)
+        print('Labels...')
+        print(labels)
         #errors = run_epoch_heuristics(batch, self.model, logs, model_input)
-        print(list(filter(None, errors)) or 'No errors!')
+        #print(list(filter(None, errors)) or 'No errors!')
+        errors = None
         if errors and self.umlaut_client:
             self.umlaut_client.send_errors(errors)
-
-        labels = K.eval(self.label_node)
-        print(labels)
 
 
     def register_model(self, model):
