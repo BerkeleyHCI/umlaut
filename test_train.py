@@ -19,13 +19,13 @@ cb = UmlautCallback(
     model,
     session_name='heuristic_test_softmax_2_noanno',
     host='localhost',
-    # offline=True,
+    offline=True
 )
 
 model.compile(
     optimizer='adam',
     # optimizer=tf.keras.optimizers.SGD(learning_rate=-0.01),
-    loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
+    loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     # loss=tf.keras.losses.sparse_categorical_crossentropy,
     metrics=['accuracy'],
 )
@@ -34,7 +34,7 @@ model.fit(
     train_images,
     train_labels,
     epochs=5,
-    batch_size=256,
+    batch_size=2048,
     callbacks=[cb],
     validation_split=0.2,  # add validation for val metrics
 )
