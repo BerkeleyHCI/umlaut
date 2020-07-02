@@ -54,14 +54,14 @@ class UmlautCallback(tf.keras.callbacks.Callback):
     def compute_naive_loss(self):
         loss_type = type(self.model.loss)
         random_logits = None
-        if loss_type == tf.keras.losses.CategoricalCrossentropy or loss_type == tf.keras.losses.CategoricalCrossentropy or loss_type == SparseCategoricalCrossentropy:
-            random_class = tf.random.uniform(tf.shape(output_node)[:-1]. min_val=0, maxval=tf.shape(output_node)[-1], dtype=tf.int32)
-            random_one_hot = tf.one_hot(random_class, depth=tf.shape(output_node)[-1])
-            random_logits = tf.cast(random_one_hot, tf.float32) * tf.math.log(0.99) + tf.cast(1 - random_one_hot, tf.float32) * tf.math.log(0.01)
+        if loss_type == tf.keras.losses.CategoricalCrossentropy or loss_type == tf.keras.losses.SparseCategoricalCrossentropy:
+            random_class = tf.random.uniform(tf.shape(self.output_node)[:-1], minval=0, maxval=tf.shape(self.output_node)[-1], dtype=tf.int32)
+            random_one_hot = tf.one_hot(random_class, depth=tf.shape(self.output_node)[-1])
+            random_logits = tf.cast(random_one_hot, tf.float32) * tf.math.log(0.999) + tf.cast(1 - random_one_hot, tf.float32) * tf.math.log(tf.constant(0.001)/tf.cast(tf.shape(self.output_node)[-1], tf.float32))
 
         if loss_type == tf.keras.losses.BinaryCrossentropy:
-            random_class = tf.random.uniform(tf.shape(output_node). min_val=0, maxval=2, dtype=tf.int32)
-            random_logits = tf.cast(random_class, tf.float32) * tf.math.log(0.99) + tf.cast(1 - random_class. tf.float32) * tf.math.log(0.01)
+            random_class = tf.random.uniform(tf.shape(self.output_node), minval=0, maxval=2, dtype=tf.int32)
+            random_logits = tf.cast(random_class, tf.float32) * tf.math.log(0.999) + tf.cast(1 - random_class. tf.float32) * tf.math.log(0.001)
         
         if loss_type == tf.keras.losses.MeanAbsoluteError or loss_type == tf.keras.losses.MeanSquaredError:
             random_logits = tf.ones_like(self.output_node) * tf.reduce_mean(self.label_node, dtype=tf.float32)
