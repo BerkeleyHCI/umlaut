@@ -43,11 +43,13 @@ class UmlautCallback(tf.keras.callbacks.Callback):
                 self.host = 'http://' + self.host
             self.umlaut_client = UmlautClient(session_name, host)
 
-    def label_metric(y_pred, y_true):
-        label_assign = self.label_node.assign(tf.cast(y_true, K.floatx()))  # pylint: disable=no-member
-        with tf.control_dependencies([label_assign]):
-            x = tf.constant(0)
-        return x
+    def get_label_metric_fn(self):
+        def label_metric(y_pred, y_true):
+            label_assign = self.label_node.assign(tf.cast(y_true, K.floatx()))  # pylint: disable=no-member
+            with tf.control_dependencies([label_assign]):
+                x = tf.constant(0)
+            return x
+        return label_metric
 
     def on_train_begin(self, logs=None):
         #errors = run_pretrain_heuristics(self.model)
@@ -96,7 +98,7 @@ class UmlautCallback(tf.keras.callbacks.Callback):
                 if 'metrics' not in kwargs:
                     kwargs['metrics'] = []
                 metrics = kwargs['metrics']
-            metrics.append(self.label_metric)
+            metrics.append(self.get_label_metric_fn())
             return current_compile(*args, **kwargs)
 
         if tf.__version__.startswith('1'):
