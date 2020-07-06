@@ -76,6 +76,7 @@ class UmlautClient:
         req_data = {}
         for error in filter(None, errors):
             req_data[error.id_str] = {
+                #TODO make this dynamically unpack error.__dict__?
                 'epochs': error.epochs,
                 'remarks': error.remarks,
             }

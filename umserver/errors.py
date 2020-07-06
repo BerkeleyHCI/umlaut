@@ -14,6 +14,7 @@ class BaseErrorMessage:
     _md_solution = None
     _so_query = None
     _docs_url = None
+    _module_url = None
 
     @property
     def description(self):
@@ -25,13 +26,6 @@ class BaseErrorMessage:
     def is_static(self):
         return self.epochs is None
 
-    def get_context_subtitle(self):
-        if self.remarks:
-            return self.subtitle.format(self.remarks)
-        elif '{' in self.subtitle:
-            return self.subtitle.format('')
-        return self.subtitle
-
     def get_annotations(self):
         return [(e - 1, e) for e in self.epochs]
 
@@ -42,7 +36,6 @@ class BaseErrorMessage:
         'error-msg-btn-annotate' which are used by callbacks.
         '''
         error_fmt = [
-            # daq.Indicator(value=True, style={'display': 'inline-block', 'paddingRight': '1rem', 'paddingBottom': '0.4rem'}),
             html.Span(id={'type': 'error-msg-indicator', 'index': error_index}, style={
                 'backgroundColor': get_error_color(error_index),
                 'borderRadius': '50%',
@@ -50,10 +43,17 @@ class BaseErrorMessage:
                 'display': 'inline-block',
             }),
             html.H3(self.title, style={'display': 'inline-block'}),
-            dcc.Markdown(self.get_context_subtitle()),
+            dcc.Markdown(self.subtitle),
+        ]
+
+        if self.remarks:
+            error_fmt.append(html.Code(self.remarks))
+
+        error_fmt.extend([
             html.H4('Solution'),
             dcc.Markdown(self.description),
-        ]
+        ])
+
         if self.epochs is None:
             error_fmt.append(html.Small('Captured before start of training.'))
         else:
@@ -82,12 +82,25 @@ class BaseErrorMessage:
                     html.Img(
                         src='https://upload.wikimedia.org/wikipedia/commons/2/2d/Tensorflow_logo.svg',
                         height='15px',
-                        style={'paddingRight': '5px', 'margin-bottom': '-3px'},
+                        style={'paddingTop': '1.2rem', 'paddingRight': '5px', 'margin-bottom': '-3px'},
                     ),
                         'Search Docs',
                 ],
                 href=self._docs_url,
                 target='_blank',
+            ))
+            error_fmt.append(html.Hr())
+        if self._module_url:
+            error_fmt.append(html.A(
+                [
+                    html.Img(
+                        src='https://upload.wikimedia.org/wikipedia/commons/9/9a/Visual_Studio_Code_1.35_icon.svg',
+                        height='15px',
+                        style={'paddingTop': '1.2rem', 'paddingRight': '5px', 'margin-bottom': '-3px'},
+                    ),
+                        'Open in VSCode',
+                ],
+                href=self._module_url,
             ))
             error_fmt.append(html.Hr())
 
@@ -112,7 +125,7 @@ class BaseErrorMessage:
 
 class InputNotNormalizedError(BaseErrorMessage):
     title = 'Input data exceeds typical limits'
-    subtitle = 'Your input data does not look normalized. {}'
+    subtitle = 'Your input data does not look normalized.'
     _so_query = {'q': '[keras] closed:yes normalization'}
     _docs_url = 'https://www.tensorflow.org/tutorials/keras/classification#preprocess_the_data'
     _md_solution = [
@@ -158,7 +171,7 @@ class NoSoftmaxActivationError(BaseErrorMessage):
     def get_annotations(self):
         return None  # static check, no annotations
 
-    def __init__(self, remarks='', *args, **kwargs):
+    def __init__(self, remarks=None, *args, **kwargs):
         # set epochs to None
         self.epochs = None
         self.remarks = remarks

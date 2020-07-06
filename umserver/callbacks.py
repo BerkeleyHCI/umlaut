@@ -327,7 +327,7 @@ def render_errors_list(errors_data):
     for i, error_spec in enumerate(errors_data):
         result_divs.append(ERROR_KEYS[error_spec['error_id_str']](
             error_spec['epochs'],
-            error_spec.get('remarks', ''),
+            error_spec.get('remarks', None),
         ).render(i))
 
     return result_divs

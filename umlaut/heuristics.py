@@ -5,12 +5,12 @@ import tensorflow as tf
 import umlaut.errors
 
 
-def run_pretrain_heuristics(model):
+def run_pretrain_heuristics(model, source_module):
     errors_raised = []
     errors_raised.append(check_softmax_computed_before_loss(model))
     return errors_raised
 
-def run_epoch_heuristics(epoch, model, logs, x_train):
+def run_epoch_heuristics(epoch, model, logs, x_train, source_module):
     errors_raised = []
     errors_raised.append(check_input_normalization(epoch, x_train))
     errors_raised.append(check_input_is_floating(epoch, model, x_train))

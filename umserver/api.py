@@ -92,6 +92,7 @@ def update_session_errors(sess_id):
                 'epochs': {'$each': errors[error_id]['epochs']},
             }
         if errors[error_id].get('remarks', False):
+            #TODO also make this dynamic?
             error_obj['$set'].update({'remarks': errors[error_id]['remarks']})
         db.errors.find_one_and_update(
             {'error_id_str': error_id, 'session_id': sess_id},

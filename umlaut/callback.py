@@ -12,8 +12,15 @@ from umlaut.heuristics import run_pretrain_heuristics
 class UmlautCallback(tf.keras.callbacks.Callback):
     def __init__(self, model, session_name=None, host='localhost', offline=False):
 
-        self.source_module = tb.extract_stack()[-2]
-        print('Source Module: ' f'vscode://file{self.source_module.filename}')
+        self._source_module_path = tb.extract_stack()[-2].filename
+        with open(self.source_module_path, 'r') as f:
+            self._source_module_contents = f.read().splitlines()
+
+        self.source_module = {
+            'path': self._source_module_path,
+            'contents': self._source_module_contents,
+        }
+
         self.tf_version = int(tf.__version__[0])  # 1 or 2
 
         # set up model shim
@@ -42,7 +49,7 @@ class UmlautCallback(tf.keras.callbacks.Callback):
 
 
     def on_train_begin(self, logs=None):
-        errors = run_pretrain_heuristics(self.model)
+        errors = run_pretrain_heuristics(self.model, self.source_module)
         print(list(filter(None, errors)) or 'No pretrain errors!')
         if errors and self.umlaut_client:
             self.umlaut_client.send_errors(errors)
@@ -54,7 +61,7 @@ class UmlautCallback(tf.keras.callbacks.Callback):
 
         print('\nRunning Umlaut checks...')
         model_input = K.eval(self.input_node)
-        errors = run_epoch_heuristics(batch, self.model, logs, model_input)
+        errors = run_epoch_heuristics(batch, self.model, logs, model_input, self.source_module)
         print(list(filter(None, errors)) or 'No errors!')
         if errors and self.umlaut_client:
             self.umlaut_client.send_errors(errors)
