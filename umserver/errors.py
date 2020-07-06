@@ -14,7 +14,6 @@ class BaseErrorMessage:
     _md_solution = None
     _so_query = None
     _docs_url = None
-    _module_url = None
 
     @property
     def description(self):
@@ -28,6 +27,9 @@ class BaseErrorMessage:
 
     def get_annotations(self):
         return [(e - 1, e) for e in self.epochs]
+
+    def serialized(self):
+        return self.__dict__
 
     def render(self, error_index):
         '''Formats an error message as a Dash html component.
@@ -47,7 +49,23 @@ class BaseErrorMessage:
         ]
 
         if self.remarks:
-            error_fmt.append(html.Code(self.remarks))
+            error_fmt.append(html.Code(
+                self.remarks,
+                style={
+                    # format to look like a slack inline code block, except pink
+                    'backgroundColor': 'rgba(29, 28, 29, 0.04)',
+                    'color': 'rgb(224, 30, 90)',
+                    'border': '1px solid rgb(210, 210, 210)',
+                    'borderRadius': '4px',
+                    'padding': '8px',
+                    'width': '100%',
+                    'overflow': 'scroll',
+                    'display': 'inline-block',
+                    'maxHeight': '2.5rem',
+                    'box-shadow': 'inset 0px 0px 3px 0px #ccc',
+                    'marginBottom': '-4px',
+                },
+            ))
 
         error_fmt.extend([
             html.H4('Solution'),
@@ -68,7 +86,7 @@ class BaseErrorMessage:
                         height='15px',
                         style={'paddingTop': '1.2rem', 'paddingRight': '5px', 'margin-bottom': '-3px'},
                     ),
-                        'Search Stack Overflow',
+                    'Search Stack Overflow',
                 ],
                 href='https://stackoverflow.com/search?{}'.format(
                     parse.urlencode(self._so_query),
@@ -84,13 +102,13 @@ class BaseErrorMessage:
                         height='15px',
                         style={'paddingTop': '1.2rem', 'paddingRight': '5px', 'margin-bottom': '-3px'},
                     ),
-                        'Search Docs',
+                    'Search Docs',
                 ],
                 href=self._docs_url,
                 target='_blank',
             ))
             error_fmt.append(html.Hr())
-        if self._module_url:
+        if self.module_url:
             error_fmt.append(html.A(
                 [
                     html.Img(
@@ -98,9 +116,9 @@ class BaseErrorMessage:
                         height='15px',
                         style={'paddingTop': '1.2rem', 'paddingRight': '5px', 'margin-bottom': '-3px'},
                     ),
-                        'Open in VSCode',
+                    'Open in VSCode',
                 ],
-                href=self._module_url,
+                href=self.module_url,
             ))
             error_fmt.append(html.Hr())
 
@@ -110,9 +128,17 @@ class BaseErrorMessage:
             style={'cursor': 'pointer', 'display': 'inline-block'},
         )
 
-    def __init__(self, epochs, remarks=None, *args, **kwargs):
+    def __init__(
+        self,
+        epochs,
+        remarks=None,
+        module_url=None,
+        *args,
+        **kwargs,
+    ):
         self.epochs = epochs
         self.remarks = remarks
+        self.module_url = module_url
         if epochs is not None and type(self.epochs) is not list:
             self.epochs = [epochs]
 

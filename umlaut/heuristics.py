@@ -12,25 +12,25 @@ def run_pretrain_heuristics(model, source_module):
 
 def run_epoch_heuristics(epoch, model, logs, x_train, source_module):
     errors_raised = []
-    errors_raised.append(check_input_normalization(epoch, x_train))
+    errors_raised.append(check_input_normalization(epoch, x_train, source_module))
     errors_raised.append(check_input_is_floating(epoch, model, x_train))
     errors_raised.append(check_nan_in_loss(epoch, logs))
     errors_raised.append(check_overfitting(epoch, model, logs))
     return errors_raised
 
 
-def check_input_normalization(epoch, x_train):
+def check_input_normalization(epoch, x_train, source_module):
     '''Returns an `InputNotNormalizedError` if inputs exceed bounds.
     '''
     x_min = np.min(x_train)
     x_max = np.max(x_train)
     remark = ''
     if x_min < -1:
-        remark = remark + f' The minimum input value is {x_min}, less than the typical value of -1.'
+        remark = remark + f'The minimum input value is {x_min}, less than the typical value of -1.'
     if x_max > 1:
-        remark = remark + f' The maximum input value is {x_max}, greater than the typical value of 1.'
+        remark = remark + f'The maximum input value is {x_max}, greater than the typical value of 1.'
     if remark:
-        return umlaut.errors.InputNotNormalizedError(epoch, remark)
+        return umlaut.errors.InputNotNormalizedError(epoch, remark, source_module['path'])
 
 
 def check_input_is_floating(epoch, model, x_train):
