@@ -25,7 +25,7 @@
                 "run",
             ],
             "jinja": true
-        }
+        },
         {
             "name": "Python: Flask",
             "type": "python",
