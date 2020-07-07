@@ -106,8 +106,8 @@ class BaseErrorMessage:
                 ],
                 href=self._docs_url,
                 target='_blank',
+                style={'paddingRight': '1rem'},
             ))
-            error_fmt.append(html.Hr())
         if self.module_url:
             error_fmt.append(html.A(
                 [
@@ -118,9 +118,9 @@ class BaseErrorMessage:
                     ),
                     'Open in VSCode',
                 ],
-                href=self.module_url,
+                href=f'vscode://file{self.module_url}',
             ))
-            error_fmt.append(html.Hr())
+        error_fmt.append(html.Hr())
 
         return html.Div(
             error_fmt,
