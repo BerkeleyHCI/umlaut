@@ -325,9 +325,11 @@ def render_errors_list(errors_data):
         result_divs.append(html.P('No errors yay!'))
 
     for i, error_spec in enumerate(errors_data):
+        #TODO make dynamic
         result_divs.append(ERROR_KEYS[error_spec['error_id_str']](
             error_spec['epochs'],
             error_spec.get('remarks', None),
+            error_spec.get('module_url', None),
         ).render(i))
 
     return result_divs
