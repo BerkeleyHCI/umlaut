@@ -91,9 +91,11 @@ def update_session_errors(sess_id):
                 # $each to iterate through list
                 'epochs': {'$each': errors[error_id]['epochs']},
             }
-        if errors[error_id].get('remarks', False):
-            #TODO also make this dynamic?
-            error_obj['$set'].update({'remarks': errors[error_id]['remarks']})
+        for k in errors[error_id]:
+            if k not in ('epochs', 'session_id', 'error_id_str'):
+                # add any remaining keys sent over to the db
+                error_obj['$set'].update({k: errors[error_id][k]})
+
         db.errors.find_one_and_update(
             {'error_id_str': error_id, 'session_id': sess_id},
             error_obj,
