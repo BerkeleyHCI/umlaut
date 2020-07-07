@@ -13,7 +13,7 @@ class UmlautCallback(tf.keras.callbacks.Callback):
     def __init__(self, model, session_name=None, host='localhost', offline=False):
 
         self._source_module_path = tb.extract_stack()[-2].filename
-        with open(self.source_module_path, 'r') as f:
+        with open(self._source_module_path, 'r') as f:
             self._source_module_contents = f.read().splitlines()
 
         self.source_module = {
