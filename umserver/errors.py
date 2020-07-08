@@ -3,6 +3,21 @@ import dash_html_components as html
 from urllib import parse
 
 
+REMARKS_STYLE = {
+    # format to look like a slack inline code block, except pink
+    'backgroundColor': 'rgba(29, 28, 29, 0.04)',
+    'color': 'rgb(224, 30, 90)',
+    'border': '1px solid rgb(210, 210, 210)',
+    'borderRadius': '4px',
+    'padding': '8px',
+    'width': '100%',
+    'overflow': 'scroll',
+    'display': 'inline-block',
+    'maxHeight': '2.5rem',
+    'box-shadow': 'inset 0px 0px 3px 0px #ccc',
+    'marginBottom': '-4px',
+}
+
 def get_error_color(error_idx):
     '''Make a qualitative color range for 4 colors (90 degrees)'''
     return f'hsl({(25 + 90*error_idx) % 360}, 95%, 80%)'
@@ -24,6 +39,22 @@ class BaseErrorMessage:
     @property
     def is_static(self):
         return self.epochs is None
+
+    @staticmethod
+    def _render_icon(img_url, caption, href):
+        return html.A(
+            [
+                html.Img(
+                    src=img_url,
+                    height='15px',
+                    style={'paddingTop': '1.2rem', 'paddingRight': '5px', 'margin-bottom': '-3px'},
+                ),
+                caption,
+            ],
+            href=href,
+            target='_blank',
+            style={'paddingRight': '1rem'},
+        )
 
     def get_annotations(self):
         return [(e - 1, e) for e in self.epochs]
@@ -48,23 +79,11 @@ class BaseErrorMessage:
             dcc.Markdown(self.subtitle),
         ]
 
+        # add error context as a formatted <pre>
         if self.remarks:
-            error_fmt.append(html.Code(
+            error_fmt.append(html.Pre(
                 self.remarks,
-                style={
-                    # format to look like a slack inline code block, except pink
-                    'backgroundColor': 'rgba(29, 28, 29, 0.04)',
-                    'color': 'rgb(224, 30, 90)',
-                    'border': '1px solid rgb(210, 210, 210)',
-                    'borderRadius': '4px',
-                    'padding': '8px',
-                    'width': '100%',
-                    'overflow': 'scroll',
-                    'display': 'inline-block',
-                    'maxHeight': '2.5rem',
-                    'box-shadow': 'inset 0px 0px 3px 0px #ccc',
-                    'marginBottom': '-4px',
-                },
+                style=REMARKS_STYLE,
             ))
 
         error_fmt.extend([
@@ -72,52 +91,31 @@ class BaseErrorMessage:
             dcc.Markdown(self.description),
         ])
 
+        # write where error was captured
         if self.epochs is None:
             error_fmt.append(html.Small('Captured before start of training.'))
         else:
             error_fmt.append(html.Small(f'Captured at epochs {self.epochs}.'))
 
         error_fmt.append(html.Br())
+
+        # append icons + external refs to error
         if self._so_query:
-            error_fmt.append(html.A(
-                [
-                    html.Img(
-                        src='https://cdn.sstatic.net/Sites/stackoverflow/company/Img/logos/so/so-icon.svg',
-                        height='15px',
-                        style={'paddingTop': '1.2rem', 'paddingRight': '5px', 'margin-bottom': '-3px'},
-                    ),
-                    'Search Stack Overflow',
-                ],
-                href='https://stackoverflow.com/search?{}'.format(
-                    parse.urlencode(self._so_query),
-                ),
-                target='_blank',
-                style={'paddingRight': '1rem'},
+            error_fmt.append(self._render_icon(
+                img_url='https://cdn.sstatic.net/Sites/stackoverflow/company/Img/logos/so/so-icon.svg',
+                caption='Search Stack Overflow',
+                href=f'https://stackoverflow.com/search?{parse.urlencode(self._so_query)}',
             ))
         if self._docs_url:
-            error_fmt.append(html.A(
-                [
-                    html.Img(
-                        src='https://upload.wikimedia.org/wikipedia/commons/2/2d/Tensorflow_logo.svg',
-                        height='15px',
-                        style={'paddingTop': '1.2rem', 'paddingRight': '5px', 'margin-bottom': '-3px'},
-                    ),
-                    'Search Docs',
-                ],
+            error_fmt.append(self._render_icon(
+                img_url='https://upload.wikimedia.org/wikipedia/commons/2/2d/Tensorflow_logo.svg',
+                caption='Search Docs',
                 href=self._docs_url,
-                target='_blank',
-                style={'paddingRight': '1rem'},
             ))
         if self.module_url:
-            error_fmt.append(html.A(
-                [
-                    html.Img(
-                        src='https://upload.wikimedia.org/wikipedia/commons/9/9a/Visual_Studio_Code_1.35_icon.svg',
-                        height='15px',
-                        style={'paddingTop': '1.2rem', 'paddingRight': '5px', 'margin-bottom': '-3px'},
-                    ),
-                    'Open in VSCode',
-                ],
+            error_fmt.append(self._render_icon(
+                img_url='https://upload.wikimedia.org/wikipedia/commons/9/9a/Visual_Studio_Code_1.35_icon.svg',
+                caption='Open in VSCode',
                 href=f'vscode://file{self.module_url}',
             ))
         error_fmt.append(html.Hr())
@@ -204,13 +202,22 @@ class NoSoftmaxActivationError(BaseErrorMessage):
 
 
 class OverfittingError(BaseErrorMessage):
-    title = 'Possible Overfitting'
+    title = 'Possible overfitting'
     subtitle = 'The validation loss is increasing while training loss is stuck or decreasing. This could indicate overfitting.'
     _so_query = {'q': '[keras] is:closed regularization'}
     _docs_url = 'https://www.tensorflow.org/api_docs/python/tf/keras/regularizers/Regularizer'
     _md_solution = [
         'Try reducing the power of your model or adding regularization. You can reduce the power of your model by decreasing the `units` or `filters` parameters of `Dense` or `Conv2D` layers.',
         'Regularization penalizes weights which are high in magnitude. You can try adding L2 or L1 regularization by using a [regularizer](https://www.tensorflow.org/api_docs/python/tf/keras/regularizers).'
+    ]
+
+
+class OverconfidentValAccuracy(BaseErrorMessage):
+    title = 'Overconfidence in validation accuracy'
+    _so_query = {'q': '[keras] validation accuracy high'}
+    _md_solution = [
+        'A high validation accuracy (around 100%) can indicate a problem with data labels, overlap between the training and validation data, or differences in preparing data for training and evaluation.',
+        'Check to see how the model performs on the test set (data the model has not seen before). If the test accuracy is similarly high, inspect the predictions by hand and ensure they make sense.',
     ]
 
 ERROR_KEYS = {

@@ -4,11 +4,20 @@ import tensorflow as tf
 
 import umlaut.errors
 
+def _get_acc_key(logs, val=False):
+    key = ''
+    if val:
+        key = 'val_'
+    if logs.get(key + 'acc', False):
+        return key + 'acc'
+    return key + 'accuracy'
+
 
 def run_pretrain_heuristics(model, source_module):
     errors_raised = []
     errors_raised.append(check_softmax_computed_before_loss(model))
     return errors_raised
+
 
 def run_epoch_heuristics(epoch, model, logs, x_train, source_module):
     errors_raised = []
@@ -17,6 +26,14 @@ def run_epoch_heuristics(epoch, model, logs, x_train, source_module):
     errors_raised.append(check_nan_in_loss(epoch, logs))
     errors_raised.append(check_overfitting(epoch, model, logs))
     return errors_raised
+
+
+def check_accuracy_is_added_to_metrics(logs, source_module):
+    NotImplemented
+
+
+def check_validation_is_added_to_fit(logs, source_module):
+    NotImplemented
 
 
 def check_input_normalization(epoch, x_train, source_module):
@@ -38,7 +55,8 @@ def check_input_is_floating(epoch, model, x_train):
     '''
     # x_train is a numpy object, not a tensor
     if not tf.as_dtype(x_train.dtype).is_floating:
-        return umlaut.errors.InputNotFloatingError(epoch)
+        remarks = f'Input type is a {x_train.dtype}'
+        return umlaut.errors.InputNotFloatingError(epoch, remarks)
 
 
 def check_nan_in_loss(epoch, logs):
@@ -75,11 +93,18 @@ def check_overfitting(epoch, model, logs):
     d_val_loss = logs['val_loss'] - last_val_loss
     if d_val_loss > 0:
         if d_loss <= 0:
-            return umlaut.errors.OverfittingError(epoch)
+            remark = f'Your training loss decreased by {d_loss} while your validation loss decreased by {d_val_loss}.'
+            return umlaut.errors.OverfittingError(epoch, remark)
 
 
-def check_high_validation_acc(epoch, logs):
-    NotImplemented
+def check_high_validation_acc(epoch, model, logs):
+    acc_key = _get_acc_key(logs, val=True)
+    remark = ''
+    if logs[acc_key] > 0.99:
+        remark += f'Validation acuracy is very high ({100. * logs[acc_key]}%). '
+    if logs[acc_key] > logs[_get_acc_key(logs)]:
+        remark += f'Validation accuracy is higher than train accuracy ({100 * logs[_get_acc_key(logs)]}%.'
+    return umlaut.errors.OverconfidentValAccuracy(epoch, remark)
 
 
 def check_initialization(epoch, model, logs):
