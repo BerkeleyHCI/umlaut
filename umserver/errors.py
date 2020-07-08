@@ -213,7 +213,8 @@ class OverfittingError(BaseErrorMessage):
 
 
 class OverconfidentValAccuracy(BaseErrorMessage):
-    title = 'Overconfidence in validation accuracy'
+    title = 'Check validation accuracy'
+    subtitle = 'The validation accuracy is either higher than typical results (near 100%) or higher than training accuracy (which can suggest problems with data labeling or splitting).'
     _so_query = {'q': '[keras] validation accuracy high'}
     _md_solution = [
         'A high validation accuracy (around 100%) can indicate a problem with data labels, overlap between the training and validation data, or differences in preparing data for training and evaluation.',

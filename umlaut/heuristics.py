@@ -56,7 +56,7 @@ def check_input_is_floating(epoch, model, x_train):
     '''
     # x_train is a numpy object, not a tensor
     if not tf.as_dtype(x_train.dtype).is_floating:
-        remarks = f'Input type is a {x_train.dtype}'
+        remarks = f'Input type is {x_train.dtype}'
         return umlaut.errors.InputNotFloatingError(epoch, remarks)
 
 
@@ -94,17 +94,18 @@ def check_overfitting(epoch, model, logs):
     d_val_loss = logs['val_loss'] - last_val_loss
     if d_val_loss > 0:
         if d_loss <= 0:
-            remark = f'Your training loss decreased by {d_loss} while your validation loss decreased by {d_val_loss}.'
+            remark = f'During epoch {epoch}, training loss changed by {d_loss:.2f} while validation loss changed by {d_val_loss:.2f}.'
             return umlaut.errors.OverfittingError(epoch, remark)
 
 
 def check_high_validation_acc(epoch, model, logs):
-    acc_key = _get_acc_key(logs, val=True)
+    val_acc = logs[_get_acc_key(logs, val=True)]
+    train_acc = logs[_get_acc_key(logs)]
     remark = ''
-    if logs[acc_key] > 0.99:
-        remark += f'Validation acuracy is very high ({100. * logs[acc_key]}%). '
-    if logs[acc_key] > logs[_get_acc_key(logs)]:
-        remark += f'Validation accuracy is higher than train accuracy ({100 * logs[_get_acc_key(logs)]}%.'
+    if val_acc > 0.95:
+        remark += f'Validation acuracy is very high ({100. * val_acc:.4f}%).\n'
+    if val_acc > train_acc:
+        remark += f'Validation accuracy (({100 * val_acc:.4f}%) is higher than train accuracy ({100. * train_acc:.4f}%).'
     return umlaut.errors.OverconfidentValAccuracy(epoch, remark)
 
 
