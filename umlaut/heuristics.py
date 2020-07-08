@@ -103,10 +103,11 @@ def check_high_validation_acc(epoch, model, logs):
     train_acc = logs[_get_acc_key(logs)]
     remark = ''
     if val_acc > 0.95:
-        remark += f'Validation acuracy is very high ({100. * val_acc:.4f}%).\n'
+        remark += f'Validation acuracy is very high ({100. * val_acc:.2f}%).\n'
     if val_acc > train_acc:
-        remark += f'Validation accuracy (({100 * val_acc:.4f}%) is higher than train accuracy ({100. * train_acc:.4f}%).'
-    return umlaut.errors.OverconfidentValAccuracy(epoch, remark)
+        remark += f'Validation accuracy ({100 * val_acc:.2f}%) is higher than train accuracy ({100. * train_acc:.2f}%).'
+    if remark:
+        return umlaut.errors.OverconfidentValAccuracy(epoch, remark)
 
 
 def check_initialization(epoch, model, logs):
