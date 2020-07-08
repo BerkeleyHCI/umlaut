@@ -25,6 +25,7 @@ def run_epoch_heuristics(epoch, model, logs, x_train, source_module):
     errors_raised.append(check_input_is_floating(epoch, model, x_train))
     errors_raised.append(check_nan_in_loss(epoch, logs))
     errors_raised.append(check_overfitting(epoch, model, logs))
+    errors_raised.append(check_high_validation_acc(epoch, model, logs))
     return errors_raised
 
 

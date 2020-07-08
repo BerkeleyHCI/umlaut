@@ -226,6 +226,7 @@ ERROR_KEYS = {
     'nan_loss': NaNInLossError,
     'no_softmax': NoSoftmaxActivationError,
     'overfitting': OverfittingError,
+    'overconfident_val': OverconfidentValAccuracy,
 }
 
 # assign id strings to error messages as a backref
