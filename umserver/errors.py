@@ -3,6 +3,21 @@ import dash_html_components as html
 from urllib import parse
 
 
+REMARKS_STYLE = {
+    # format to look like a slack inline code block, except pink
+    'backgroundColor': 'rgba(29, 28, 29, 0.04)',
+    'color': 'rgb(224, 30, 90)',
+    'border': '1px solid rgb(210, 210, 210)',
+    'borderRadius': '4px',
+    'padding': '8px',
+    'width': '100%',
+    'overflow': 'scroll',
+    'display': 'inline-block',
+    'maxHeight': '2.5rem',
+    'box-shadow': 'inset 0px 0px 3px 0px #ccc',
+    'marginBottom': '-4px',
+}
+
 def get_error_color(error_idx):
     '''Make a qualitative color range for 4 colors (90 degrees)'''
     return f'hsl({(25 + 90*error_idx) % 360}, 95%, 80%)'
@@ -25,15 +40,27 @@ class BaseErrorMessage:
     def is_static(self):
         return self.epochs is None
 
-    def get_context_subtitle(self):
-        if self.remarks:
-            return self.subtitle.format(self.remarks)
-        elif '{' in self.subtitle:
-            return self.subtitle.format('')
-        return self.subtitle
+    @staticmethod
+    def _render_icon(img_url, caption, href):
+        return html.A(
+            [
+                html.Img(
+                    src=img_url,
+                    height='15px',
+                    style={'paddingTop': '1.2rem', 'paddingRight': '5px', 'margin-bottom': '-3px'},
+                ),
+                caption,
+            ],
+            href=href,
+            target='_blank',
+            style={'paddingRight': '1rem'},
+        )
 
     def get_annotations(self):
         return [(e - 1, e) for e in self.epochs]
+
+    def serialized(self):
+        return self.__dict__
 
     def render(self, error_index):
         '''Formats an error message as a Dash html component.
@@ -42,7 +69,6 @@ class BaseErrorMessage:
         'error-msg-btn-annotate' which are used by callbacks.
         '''
         error_fmt = [
-            # daq.Indicator(value=True, style={'display': 'inline-block', 'paddingRight': '1rem', 'paddingBottom': '0.4rem'}),
             html.Span(id={'type': 'error-msg-indicator', 'index': error_index}, style={
                 'backgroundColor': get_error_color(error_index),
                 'borderRadius': '50%',
@@ -50,46 +76,49 @@ class BaseErrorMessage:
                 'display': 'inline-block',
             }),
             html.H3(self.title, style={'display': 'inline-block'}),
-            dcc.Markdown(self.get_context_subtitle()),
+            dcc.Markdown(self.subtitle),
+        ]
+
+        # add error context as a formatted <pre>
+        if self.remarks:
+            error_fmt.append(html.Pre(
+                self.remarks,
+                style=REMARKS_STYLE,
+            ))
+
+        error_fmt.extend([
             html.H4('Solution'),
             dcc.Markdown(self.description),
-        ]
+        ])
+
+        # write where error was captured
         if self.epochs is None:
             error_fmt.append(html.Small('Captured before start of training.'))
         else:
             error_fmt.append(html.Small(f'Captured at epochs {self.epochs}.'))
 
         error_fmt.append(html.Br())
+
+        # append icons + external refs to error
         if self._so_query:
-            error_fmt.append(html.A(
-                [
-                    html.Img(
-                        src='https://cdn.sstatic.net/Sites/stackoverflow/company/Img/logos/so/so-icon.svg',
-                        height='15px',
-                        style={'paddingTop': '1.2rem', 'paddingRight': '5px', 'margin-bottom': '-3px'},
-                    ),
-                        'Search Stack Overflow',
-                ],
-                href='https://stackoverflow.com/search?{}'.format(
-                    parse.urlencode(self._so_query),
-                ),
-                target='_blank',
-                style={'paddingRight': '1rem'},
+            error_fmt.append(self._render_icon(
+                img_url='https://cdn.sstatic.net/Sites/stackoverflow/company/Img/logos/so/so-icon.svg',
+                caption='Search Stack Overflow',
+                href=f'https://stackoverflow.com/search?{parse.urlencode(self._so_query)}',
             ))
         if self._docs_url:
-            error_fmt.append(html.A(
-                [
-                    html.Img(
-                        src='https://upload.wikimedia.org/wikipedia/commons/2/2d/Tensorflow_logo.svg',
-                        height='15px',
-                        style={'paddingRight': '5px', 'margin-bottom': '-3px'},
-                    ),
-                        'Search Docs',
-                ],
+            error_fmt.append(self._render_icon(
+                img_url='https://upload.wikimedia.org/wikipedia/commons/2/2d/Tensorflow_logo.svg',
+                caption='Search Docs',
                 href=self._docs_url,
-                target='_blank',
             ))
-            error_fmt.append(html.Hr())
+        if self.module_url:
+            error_fmt.append(self._render_icon(
+                img_url='https://upload.wikimedia.org/wikipedia/commons/9/9a/Visual_Studio_Code_1.35_icon.svg',
+                caption='Open in VSCode',
+                href=f'vscode://file{self.module_url}',
+            ))
+        error_fmt.append(html.Hr())
 
         return html.Div(
             error_fmt,
@@ -97,9 +126,17 @@ class BaseErrorMessage:
             style={'cursor': 'pointer', 'display': 'inline-block'},
         )
 
-    def __init__(self, epochs, remarks=None, *args, **kwargs):
+    def __init__(
+        self,
+        epochs,
+        remarks=None,
+        module_url=None,
+        *args,
+        **kwargs,
+    ):
         self.epochs = epochs
         self.remarks = remarks
+        self.module_url = module_url
         if epochs is not None and type(self.epochs) is not list:
             self.epochs = [epochs]
 
@@ -112,7 +149,7 @@ class BaseErrorMessage:
 
 class InputNotNormalizedError(BaseErrorMessage):
     title = 'Input data exceeds typical limits'
-    subtitle = 'Your input data does not look normalized. {}'
+    subtitle = 'Your input data does not look normalized.'
     _so_query = {'q': '[keras] closed:yes normalization'}
     _docs_url = 'https://www.tensorflow.org/tutorials/keras/classification#preprocess_the_data'
     _md_solution = [
@@ -158,14 +195,14 @@ class NoSoftmaxActivationError(BaseErrorMessage):
     def get_annotations(self):
         return None  # static check, no annotations
 
-    def __init__(self, remarks='', *args, **kwargs):
+    def __init__(self, remarks=None, *args, **kwargs):
         # set epochs to None
         self.epochs = None
         self.remarks = remarks
 
 
 class OverfittingError(BaseErrorMessage):
-    title = 'Possible Overfitting'
+    title = 'Possible overfitting'
     subtitle = 'The validation loss is increasing while training loss is stuck or decreasing. This could indicate overfitting.'
     _so_query = {'q': '[keras] is:closed regularization'}
     _docs_url = 'https://www.tensorflow.org/api_docs/python/tf/keras/regularizers/Regularizer'
@@ -174,12 +211,23 @@ class OverfittingError(BaseErrorMessage):
         'Regularization penalizes weights which are high in magnitude. You can try adding L2 or L1 regularization by using a [regularizer](https://www.tensorflow.org/api_docs/python/tf/keras/regularizers).'
     ]
 
+
+class OverconfidentValAccuracy(BaseErrorMessage):
+    title = 'Check validation accuracy'
+    subtitle = 'The validation accuracy is either higher than typical results (near 100%) or higher than training accuracy (which can suggest problems with data labeling or splitting).'
+    _so_query = {'q': '[keras] validation accuracy high'}
+    _md_solution = [
+        'A high validation accuracy (around 100%) can indicate a problem with data labels, overlap between the training and validation data, or differences in preparing data for training and evaluation.',
+        'Check to see how the model performs on the test set (data the model has not seen before). If the test accuracy is similarly high, inspect the predictions by hand and ensure they make sense.',
+    ]
+
 ERROR_KEYS = {
     'input_normalization': InputNotNormalizedError,
     'input_not_floating': InputNotFloatingError,
     'nan_loss': NaNInLossError,
     'no_softmax': NoSoftmaxActivationError,
     'overfitting': OverfittingError,
+    'overconfident_val': OverconfidentValAccuracy,
 }
 
 # assign id strings to error messages as a backref

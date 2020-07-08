@@ -69,16 +69,14 @@ class UmlautClient:
         {
             error_id_str: {
                 epochs: [items pushed to list],
-                remarks: 'String with remarks from last run',
+                [remarks]: 'String with remarks from last run',
+                [source_module]: {'path': path_to_file, 'contents': file_lines},
             }
         }
         '''
         req_data = {}
         for error in filter(None, errors):
-            req_data[error.id_str] = {
-                'epochs': error.epochs,
-                'remarks': error.remarks,
-            }
+            req_data[error.id_str] = error.serialized()
         if req_data:
             r = requests.post(
                 f'http://{self.host}/api/updateSessionErrors/{self.session_id}',

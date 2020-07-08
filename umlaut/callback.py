@@ -1,8 +1,9 @@
+import numpy as np
+import json
 import tensorflow as tf
 import tensorflow.keras.backend as K
-import numpy as np
+import traceback as tb
 import types
-import json
 
 from umlaut.client import UmlautClient
 from umlaut.heuristics import run_epoch_heuristics
@@ -10,6 +11,15 @@ from umlaut.heuristics import run_pretrain_heuristics
 
 class UmlautCallback(tf.keras.callbacks.Callback):
     def __init__(self, model, session_name=None, host='localhost', offline=False):
+
+        self._source_module_path = tb.extract_stack()[-2].filename
+        with open(self._source_module_path, 'r') as f:
+            self._source_module_contents = f.read().splitlines()
+
+        self.source_module = {
+            'path': self._source_module_path,
+            'contents': self._source_module_contents,
+        }
 
         self.tf_version = int(tf.__version__[0])  # 1 or 2
 
@@ -39,7 +49,7 @@ class UmlautCallback(tf.keras.callbacks.Callback):
 
 
     def on_train_begin(self, logs=None):
-        errors = run_pretrain_heuristics(self.model)
+        errors = run_pretrain_heuristics(self.model, self.source_module)
         print(list(filter(None, errors)) or 'No pretrain errors!')
         if errors and self.umlaut_client:
             self.umlaut_client.send_errors(errors)
@@ -49,9 +59,9 @@ class UmlautCallback(tf.keras.callbacks.Callback):
         if self.umlaut_client:
             self.umlaut_client.send_logs_to_server(batch, logs)
 
-        print('Running Umlaut checks...')
+        print('\nRunning Umlaut checks...')
         model_input = K.eval(self.input_node)
-        errors = run_epoch_heuristics(batch, self.model, logs, model_input)
+        errors = run_epoch_heuristics(batch, self.model, logs, model_input, self.source_module)
         print(list(filter(None, errors)) or 'No errors!')
         if errors and self.umlaut_client:
             self.umlaut_client.send_errors(errors)
