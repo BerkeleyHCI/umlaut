@@ -8,17 +8,28 @@ import types
 from umlaut.client import UmlautClient
 from umlaut.heuristics import run_epoch_heuristics
 from umlaut.heuristics import run_pretrain_heuristics
+from umlaut.heuristics import run_specification_heuristics
 
 class UmlautCallback(tf.keras.callbacks.Callback):
-    def __init__(self, model, session_name=None, host='localhost', offline=False):
+    def __init__(
+        self,
+        model,
+        input_spec=None,
+        output_spec=None,
+        training_data=None,
+        training_labels=None,
+        session_name=None,
+        host='localhost',
+        offline=False,
+    ):
 
-        self._source_module_path = tb.extract_stack()[-2].filename
-        with open(self._source_module_path, 'r') as f:
-            self._source_module_contents = f.read().splitlines()
+        source_module_path = tb.extract_stack()[-2].filename
+        with open(source_module_path, 'r') as f:
+            source_module_contents = f.read().splitlines()
 
         self.source_module = {
-            'path': self._source_module_path,
-            'contents': self._source_module_contents,
+            'path': source_module_path,
+            'contents': source_module_contents,
         }
 
         self.tf_version = int(tf.__version__[0])  # 1 or 2
@@ -39,6 +50,12 @@ class UmlautCallback(tf.keras.callbacks.Callback):
         )
         self.register_model(self.model)
 
+        # store specification for use with callbacks
+        self.input_spec = input_spec
+        self.output_spec = output_spec
+        self.training_data = training_data
+        self.training_labels = training_labels
+
         # set up umlaut client
         self.umlaut_client = None
         if not offline:
@@ -49,7 +66,10 @@ class UmlautCallback(tf.keras.callbacks.Callback):
 
 
     def on_train_begin(self, logs=None):
-        errors = run_pretrain_heuristics(self.model, self.source_module)
+        errors = []
+        # if self.input_spec is not None or self.output_spec is not None:
+        #     errors.extend(run_specification_heuristics(self.model, self.training_data, self.training_labels, self.input_spec, self.output_spec, self.source_module))
+        errors.extend(run_pretrain_heuristics(self.model, self.source_module))
         print(list(filter(None, errors)) or 'No pretrain errors!')
         if errors and self.umlaut_client:
             self.umlaut_client.send_errors(errors)
@@ -96,8 +116,4 @@ class UmlautCallback(tf.keras.callbacks.Callback):
 
             new_call = v1_compat_call
             
-            model.call = types.MethodType(new_call, model)
-            return
-
-
         model.call = types.MethodType(new_call, model)

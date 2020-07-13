@@ -13,6 +13,21 @@ def _get_acc_key(logs, val=False):
     return key + 'accuracy'
 
 
+def run_specification_heuristics(model, training_data, training_labels, input_spec, output_spec, source_module):
+    errors_raised = []
+    if input_spec is not None:
+        if training_data is not None:
+            errors_raised.append(check_input_spec(model, input_spec, training_data))
+        else:
+            print('WARNING: input_spec tests will not run without training_data provided.')
+    if output_spec is not None:
+        if training_labels is not None:
+            errors_raised.append(check_output_spec(model, output_spec, training_labels))
+        else:
+            print('WARNING: output_spec tests will not run without training_labels provided.')
+    return errors_raised
+
+
 def run_pretrain_heuristics(model, source_module):
     errors_raised = []
     errors_raised.append(check_softmax_computed_before_loss(model))
@@ -48,6 +63,7 @@ def check_input_normalization(epoch, x_train, source_module):
     if x_max > 1:
         remark = remark + f'The maximum input value is {x_max}, greater than the typical value of 1.'
     if remark:
+        remark = f'Epoch {epoch}: ' + remark
         return umlaut.errors.InputNotNormalizedError(epoch, remark, source_module['path'])
 
 
@@ -56,7 +72,7 @@ def check_input_is_floating(epoch, model, x_train):
     '''
     # x_train is a numpy object, not a tensor
     if not tf.as_dtype(x_train.dtype).is_floating:
-        remarks = f'Input type is {x_train.dtype}'
+        remarks = f'Epoch {epoch}: Input type is {x_train.dtype}'
         return umlaut.errors.InputNotFloatingError(epoch, remarks)
 
 
@@ -79,6 +95,14 @@ def check_softmax_computed_before_loss(model):
     last_layer_is_softmax = isinstance(model.layers[-1], tf.keras.layers.Softmax)
     if not last_layer_is_softmax and not from_logits:
         return umlaut.errors.NoSoftmaxActivationError()
+
+
+def check_input_spec(model, input_spec, training_data):
+    NotImplemented
+
+
+def check_output_spec(model, output_spec, training_labels):
+    NotImplemented
 
 
 def check_learning_rate_range(epoch, model):
@@ -107,6 +131,7 @@ def check_high_validation_acc(epoch, model, logs):
     if val_acc > train_acc:
         remark += f'Validation accuracy ({100 * val_acc:.2f}%) is higher than train accuracy ({100. * train_acc:.2f}%).'
     if remark:
+        remark = f'Epoch {epoch}: ' + remark
         return umlaut.errors.OverconfidentValAccuracy(epoch, remark)
 
 
