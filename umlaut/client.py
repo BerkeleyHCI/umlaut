@@ -16,6 +16,7 @@ class UmlautClient:
             # if no name, unnamed_{yymmdd_hhmmss} is used
             session_name = 'unnamed_' + dt.strftime(dt.now(), '%y%m%d_%H%M%S')
         self.session_id = self.get_session_id_from_name(session_name)
+        print(f'Umlaut session is live at http://{self.host}/session/{self.session_id}')
 
 
     def get_session_id_from_name(self, session_name):
