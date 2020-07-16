@@ -23,7 +23,7 @@ def _search_source_module(pattern, source_module_contents):
 
 
 def _make_vscode_url(line_match, source_module_path):
-    return f'{source_module_path}:{line_match[0]}:{line_match[1].start()}'
+    return f'{source_module_path}:{line_match[0]+1}:{line_match[1].start()+1}'
 
 
 def _get_module_ref_from_pattern(pattern, source_module):
