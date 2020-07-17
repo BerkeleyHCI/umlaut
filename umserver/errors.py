@@ -223,7 +223,7 @@ class NoSoftmaxActivationError(BaseErrorMessage):
 
 class OverfittingError(BaseErrorMessage):
     title = 'Possible overfitting'
-    subtitle = 'The validation loss is increasing while training loss is stuck or decreasing. This could indicate overfitting.'
+    subtitle = 'The validation loss is increasing while training loss is stuck or decreasing. This could indicate overfitting. However, if validation loss is still trending downwards afterwards, this error could be a false positive.'
     _so_query = {'q': '[keras] is:closed regularization'}
     _docs_url = 'https://www.tensorflow.org/api_docs/python/tf/keras/regularizers/Regularizer'
     _md_solution = [
