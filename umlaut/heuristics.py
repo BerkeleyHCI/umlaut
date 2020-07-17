@@ -1,6 +1,8 @@
 import re
 import numpy as np
 import tensorflow as tf
+import tensorflow.keras.backend as K
+from tensorflow.python.client import device_lib
 
 import umlaut.errors
 
@@ -40,12 +42,12 @@ def run_pretrain_heuristics(model, source_module):
     return errors_raised
 
 
-def run_epoch_heuristics(epoch, model, lr, logs, x_train, source_module):
+def run_epoch_heuristics(epoch, model, logs, model_input, source_module):
     errors_raised = []
-    errors_raised.append(check_input_normalization(epoch, x_train, source_module))
-    errors_raised.append(check_input_is_floating(epoch, model, x_train, source_module))
-    errors_raised.append(check_nan_in_loss(epoch, lr, x_train, logs))
-    errors_raised.append(check_input_shape(epoch, x_train))
+    errors_raised.append(check_input_normalization(epoch, model_input, source_module))
+    errors_raised.append(check_input_is_floating(epoch, model, model_input, source_module))
+    errors_raised.append(check_nan_in_loss(epoch, model, model_input, logs))
+    errors_raised.append(check_input_shape(epoch, model_input))
     errors_raised.append(check_overfitting(epoch, model, logs))
     errors_raised.append(check_high_validation_acc(epoch, model, logs))
     return errors_raised
@@ -60,10 +62,20 @@ def check_validation_is_added_to_fit(logs, source_module):
 
 
 def check_input_shape(epoch, x_train):
-    x_train_shape = x_train.shape
-    if len(x_train_shape) == 4 and x_train_shape[2] == x_train_shape[3]:
-        remark = remark + f'Epoch {epoch}: the input shape is {x_train_shape}'
+    if x_train is None:
+        print('Warning: train data not provided to umlaut, skipping heuristics')
+        return
+    if 'GPU' in str(device_lib.list_local_devices()):
+        # GPUs prefer NCHW
+        if len(x_train.shape) == 4 and x_train.shape[2] != x_train.shape[3]:
+            remark = f'Epoch {epoch}: GPU present and input shape is not H,C,H,W. Instead got {x_train.shape}'
+            return umlaut.errors.InputWrongShapeError(epoch, remark)
+    elif len(x_train.shape) == 4 and x_train.shape[1] != x_train.shape[2]:
+        # CPUs prefer NHWC
+        remark = f'Epoch {epoch}: no GPU present and input shape is not N,H,W,C. Instead got {x_train.shape}'
         return umlaut.errors.InputWrongShapeError(epoch, remark)
+
+
 
 def check_input_normalization(epoch, x_train, source_module):
     '''Returns an `InputNotNormalizedError` if inputs exceed bounds.
@@ -84,25 +96,31 @@ def check_input_is_floating(epoch, model, x_train, source_module):
     '''Returns an `InputNotFloatingError` if input is not floating.
     '''
     # x_train is a numpy object, not a tensor
+    if x_train is None:
+        print('Warning: train data not provided to umlaut, skipping heuristics')
+        return
     if not tf.as_dtype(x_train.dtype).is_floating:
         remarks = f'Epoch {epoch}: Input type is {x_train.dtype}'
         module_ref = _get_module_ref_from_pattern('model\.fit', source_module)
         return umlaut.errors.InputNotFloatingError(epoch, remarks, module_ref)
 
 
-def check_nan_in_loss(epoch, lr, x_train, logs):
+def check_nan_in_loss(epoch, model, x_train, logs):
     '''Returns a NanInLossError if loss is NaN.
     '''
     loss = logs['loss']
+    lr = K.eval(model.optimizer.lr)
     if np.isnan(loss):
-        if np.isnan(x_train):
+        if x_train is None:
+            print('Warning: train data not provided to umlaut, skipping heuristics')
+        elif np.isnan(x_train):
             return umlaut.errors.NaNInInputError(epoch)
         if lr > 0.01 or lr < 0.00001:
             remarks = f'Epoch {epoch}: Learning Rate is {lr}'
             if lr > 0.01:
-                return umlaut.errors.HighLRError(epoch, remarks)
+                return umlaut.errors.LRHighError(epoch, remarks)
             else:
-                return umlaut.errors.LowLRError(epoch, remarks)
+                return umlaut.errors.LRLowError(epoch, remarks)
 
 
 def check_softmax_computed_before_loss(model, source_module):

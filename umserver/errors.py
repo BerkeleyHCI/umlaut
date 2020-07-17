@@ -162,8 +162,8 @@ class InputWrongShapeError(BaseErrorMessage):
     title = 'Potential input shape error'
     subtitle = 'Your inputs potentially has the wrong shape.'
     _md_description = [
-        'We detected that your input is 4-dimensional with 2 equal dimensions, which is typically an image type. However, most keras layers by default expects your image data to be formatted as (Batch_size, Height, Width, Channel). Your current format appears to be (Batch_size, Channel, Height, Width).',
-        'You can transpose your input data using tf.transpose(x_train, [0, 2, 3, 1]).',
+        'We detected that your input is 4-dimensional with 2 equal dimensions, which is typically an image type. However, most keras layers by default expects your image data to be formatted as (Batch_size, Height, Width, Channel) if using a GPU, or (Batch_size, Channel, Height, Width) if using a CPU.',
+        'You can transpose your input data using `tf.transpose(x_train, [0, 2, 3, 1])`.',
     ]
 
 class InputNotFloatingError(BaseErrorMessage):
@@ -182,11 +182,11 @@ class LRError(BaseErrorMessage):
         'You can set your learning rate when you create your optimizer object. Typical learning rates for the Adam optimizer are between 0.00001 and 0.01. For example:',
         '`model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001))`',
     ]
-class HighLRError(LRError):
+class LRHighError(LRError):
     title = 'Learning Rate is too high'
     subtitle = 'The learning rate you set is higher than the typical range. This could lead to the model\'s inability to learn.'
     
-class LowLRError(LRError):
+class LRLowError(LRError):
     title = 'Learning Rate is too low'
     subtitle = 'The learning rate you set is lower than the typical range. This could lead to the model\'s inability to learn.'
     
@@ -244,7 +244,10 @@ class OverconfidentValAccuracy(BaseErrorMessage):
 ERROR_KEYS = {
     'input_normalization': InputNotNormalizedError,
     'input_not_floating': InputNotFloatingError,
-    'nan_loss': NaNInLossError,
+    'input_wrong_shape': InputWrongShapeError,
+    'nan_input': NaNInInputError,
+    'lr_high': LRHighError,
+    'lr_low': LRLowError,
     'no_softmax': NoSoftmaxActivationError,
     'overfitting': OverfittingError,
     'overconfident_val': OverconfidentValAccuracy,
