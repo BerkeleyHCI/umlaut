@@ -200,7 +200,7 @@ class NaNInInputError(BaseErrorMessage):
     ]
 
 class NoSoftmaxActivationError(BaseErrorMessage):
-    title = 'Loss function expects normalized input'
+    title = 'Missing Softmax layer before loss'
     subtitle = 'The loss function of your model expects a probability distribution as input (i.e., the likelihood for all the classes sums to 1), but your model is producing un-normalized outputs, called "logits". Logits can be normalized to a probability distribution with a [softmax](https://www.tensorflow.org/api_docs/python/tf/keras/layers/Softmax) layer.'
     _so_query = {'q': '[keras] is:closed from_logits'}
     _docs_url = 'https://www.tensorflow.org/api_docs/python/tf/keras/losses'

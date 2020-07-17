@@ -44,10 +44,11 @@ def run_pretrain_heuristics(model, source_module):
 
 def run_epoch_heuristics(epoch, model, logs, model_input, source_module):
     errors_raised = []
+    errors_raised.append(check_input_shape(epoch, model_input))
     errors_raised.append(check_input_normalization(epoch, model_input, source_module))
     errors_raised.append(check_input_is_floating(epoch, model, model_input, source_module))
     errors_raised.append(check_nan_in_loss(epoch, model, model_input, logs))
-    errors_raised.append(check_input_shape(epoch, model_input))
+    errors_raised.append(check_learning_rate_range(epoch, model))
     errors_raised.append(check_overfitting(epoch, model, logs))
     errors_raised.append(check_high_validation_acc(epoch, model, logs))
     return errors_raised
@@ -109,18 +110,11 @@ def check_nan_in_loss(epoch, model, x_train, logs):
     '''Returns a NanInLossError if loss is NaN.
     '''
     loss = logs['loss']
-    lr = K.eval(model.optimizer.lr)
     if np.isnan(loss):
         if x_train is None:
             print('Warning: train data not provided to umlaut, skipping heuristics')
-        elif np.isnan(x_train):
+        elif any(np.isnan(x_train)):
             return umlaut.errors.NaNInInputError(epoch)
-        if lr > 0.01 or lr < 0.00001:
-            remarks = f'Epoch {epoch}: Learning Rate is {lr}'
-            if lr > 0.01:
-                return umlaut.errors.LRHighError(epoch, remarks)
-            else:
-                return umlaut.errors.LRLowError(epoch, remarks)
 
 
 def check_softmax_computed_before_loss(model, source_module):
@@ -142,7 +136,13 @@ def check_softmax_computed_before_loss(model, source_module):
 
 
 def check_learning_rate_range(epoch, model):
-    NotImplemented
+    lr = K.eval(model.optimizer.lr)
+    if lr > 0.01 or lr < 1e-7:
+        remarks = f'Epoch {epoch}: Learning Rate is {lr}'
+        if lr > 0.01:
+            return umlaut.errors.LRHighError(epoch, remarks)
+        else:
+            return umlaut.errors.LRLowError(epoch, remarks)
 
 
 def check_overfitting(epoch, model, logs):
