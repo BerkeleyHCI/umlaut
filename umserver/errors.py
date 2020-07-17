@@ -158,6 +158,13 @@ class InputNotNormalizedError(BaseErrorMessage):
         '`training_images = (training_images / 128.0) - 1`',
     ]
     
+class InputWrongShapeError(BaseErrorMessage):
+    title = 'Potential input shape error'
+    subtitle = 'Your inputs potentially has the wrong shape.'
+    _md_description = [
+        'We detected that your input is 4-dimensional with 2 equal dimensions, which is typically an image type. However, most keras layers by default expects your image data to be formatted as (Batch_size, Height, Width, Channel). Your current format appears to be (Batch_size, Channel, Height, Width).',
+        'You can transpose your input data using tf.transpose(x_train, [0, 2, 3, 1]).',
+    ]
 
 class InputNotFloatingError(BaseErrorMessage):
     title = 'Input is not a Float type'
@@ -170,15 +177,27 @@ class InputNotFloatingError(BaseErrorMessage):
     ]
 
 
-class NaNInLossError(BaseErrorMessage):
-    title = 'NaN (Not a number) in loss'
-    subtitle = 'The loss value of your model has gone to NaN (could indicate infinity). This could be caused by a learning rate that is too high.'
-    _so_query = {'q': '[keras] nan loss'}
+class LRError(BaseErrorMessage):
     _md_solution = [
         'You can set your learning rate when you create your optimizer object. Typical learning rates for the Adam optimizer are between 0.00001 and 0.01. For example:',
         '`model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001))`',
     ]
+class HighLRError(LRError):
+    title = 'Learning Rate is too high'
+    subtitle = 'The learning rate you set is higher than the typical range. This could lead to the model\'s inability to learn.'
+    
+class LowLRError(LRError):
+    title = 'Learning Rate is too low'
+    subtitle = 'The learning rate you set is lower than the typical range. This could lead to the model\'s inability to learn.'
+    
 
+class NaNInInputError(BaseErrorMessage):
+    title = 'NaN (Not a number) in input'
+    subtitle = 'Some values in your model input is NaN (could indicate infinity).'
+    _so_query = {'q': '[keras] nan input'}
+    _md_solution = [
+        'Please double check your input and make sure no NaN exists in it.',
+    ]
 
 class NoSoftmaxActivationError(BaseErrorMessage):
     title = 'Loss function expects normalized input'

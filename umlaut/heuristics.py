@@ -40,11 +40,12 @@ def run_pretrain_heuristics(model, source_module):
     return errors_raised
 
 
-def run_epoch_heuristics(epoch, model, logs, x_train, source_module):
+def run_epoch_heuristics(epoch, model, lr, logs, x_train, source_module):
     errors_raised = []
     errors_raised.append(check_input_normalization(epoch, x_train, source_module))
     errors_raised.append(check_input_is_floating(epoch, model, x_train, source_module))
-    errors_raised.append(check_nan_in_loss(epoch, logs))
+    errors_raised.append(check_nan_in_loss(epoch, lr, x_train, logs))
+    errors_raised.append(check_input_shape(epoch, x_train))
     errors_raised.append(check_overfitting(epoch, model, logs))
     errors_raised.append(check_high_validation_acc(epoch, model, logs))
     return errors_raised
@@ -57,6 +58,12 @@ def check_accuracy_is_added_to_metrics(logs, source_module):
 def check_validation_is_added_to_fit(logs, source_module):
     NotImplemented
 
+
+def check_input_shape(epoch, x_train):
+    x_train_shape = x_train.shape
+    if len(x_train_shape) == 4 and x_train_shape[2] == x_train_shape[3]:
+        remark = remark + f'Epoch {epoch}: the input shape is {x_train_shape}'
+        return umlaut.errors.InputWrongShapeError(epoch, remark)
 
 def check_input_normalization(epoch, x_train, source_module):
     '''Returns an `InputNotNormalizedError` if inputs exceed bounds.
@@ -83,12 +90,19 @@ def check_input_is_floating(epoch, model, x_train, source_module):
         return umlaut.errors.InputNotFloatingError(epoch, remarks, module_ref)
 
 
-def check_nan_in_loss(epoch, logs):
+def check_nan_in_loss(epoch, lr, x_train, logs):
     '''Returns a NanInLossError if loss is NaN.
     '''
     loss = logs['loss']
     if np.isnan(loss):
-        return umlaut.errors.NaNInLossError(epoch)
+        if np.isnan(x_train):
+            return umlaut.errors.NaNInInputError(epoch)
+        if lr > 0.01 or lr < 0.00001:
+            remarks = f'Epoch {epoch}: Learning Rate is {lr}'
+            if lr > 0.01:
+                return umlaut.errors.HighLRError(epoch, remarks)
+            else:
+                return umlaut.errors.LowLRError(epoch, remarks)
 
 
 def check_softmax_computed_before_loss(model, source_module):
