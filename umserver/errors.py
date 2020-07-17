@@ -158,6 +158,13 @@ class InputNotNormalizedError(BaseErrorMessage):
         '`training_images = (training_images / 128.0) - 1`',
     ]
     
+class InputWrongShapeError(BaseErrorMessage):
+    title = 'Potential input shape error'
+    subtitle = 'Your inputs potentially has the wrong shape.'
+    _md_description = [
+        'We detected that your input is 4-dimensional with 2 equal dimensions, which is typically an image type. However, most keras layers by default expects your image data to be formatted as (Batch_size, Height, Width, Channel) if using a GPU, or (Batch_size, Channel, Height, Width) if using a CPU.',
+        'You can transpose your input data using `tf.transpose(x_train, [0, 2, 3, 1])`.',
+    ]
 
 class InputNotFloatingError(BaseErrorMessage):
     title = 'Input is not a Float type'
@@ -170,18 +177,30 @@ class InputNotFloatingError(BaseErrorMessage):
     ]
 
 
-class NaNInLossError(BaseErrorMessage):
-    title = 'NaN (Not a number) in loss'
-    subtitle = 'The loss value of your model has gone to NaN (could indicate infinity). This could be caused by a learning rate that is too high.'
-    _so_query = {'q': '[keras] nan loss'}
+class LRError(BaseErrorMessage):
     _md_solution = [
         'You can set your learning rate when you create your optimizer object. Typical learning rates for the Adam optimizer are between 0.00001 and 0.01. For example:',
         '`model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001))`',
     ]
+class LRHighError(LRError):
+    title = 'Learning Rate is too high'
+    subtitle = 'The learning rate you set is higher than the typical range. This could lead to the model\'s inability to learn.'
+    
+class LRLowError(LRError):
+    title = 'Learning Rate is too low'
+    subtitle = 'The learning rate you set is lower than the typical range. This could lead to the model\'s inability to learn.'
+    
 
+class NaNInInputError(BaseErrorMessage):
+    title = 'NaN (Not a number) in input'
+    subtitle = 'Some values in your model input is NaN (could indicate infinity).'
+    _so_query = {'q': '[keras] nan input'}
+    _md_solution = [
+        'Please double check your input and make sure no NaN exists in it.',
+    ]
 
 class NoSoftmaxActivationError(BaseErrorMessage):
-    title = 'Loss function expects normalized input'
+    title = 'Missing Softmax layer before loss'
     subtitle = 'The loss function of your model expects a probability distribution as input (i.e., the likelihood for all the classes sums to 1), but your model is producing un-normalized outputs, called "logits". Logits can be normalized to a probability distribution with a [softmax](https://www.tensorflow.org/api_docs/python/tf/keras/layers/Softmax) layer.'
     _so_query = {'q': '[keras] is:closed from_logits'}
     _docs_url = 'https://www.tensorflow.org/api_docs/python/tf/keras/losses'
@@ -204,7 +223,7 @@ class NoSoftmaxActivationError(BaseErrorMessage):
 
 class OverfittingError(BaseErrorMessage):
     title = 'Possible overfitting'
-    subtitle = 'The validation loss is increasing while training loss is stuck or decreasing. This could indicate overfitting.'
+    subtitle = 'The validation loss is increasing while training loss is stuck or decreasing. This could indicate overfitting. However, if validation loss is still trending downwards afterwards, this error could be a false positive.'
     _so_query = {'q': '[keras] is:closed regularization'}
     _docs_url = 'https://www.tensorflow.org/api_docs/python/tf/keras/regularizers/Regularizer'
     _md_solution = [
@@ -215,7 +234,7 @@ class OverfittingError(BaseErrorMessage):
 
 class OverconfidentValAccuracy(BaseErrorMessage):
     title = 'Check validation accuracy'
-    subtitle = 'The validation accuracy is either higher than typical results (near 100%) or higher than training accuracy (which can suggest problems with data labeling or splitting).'
+    subtitle = 'The validation accuracy is either higher than typical results (near 100%) or higher than training accuracy (which can suggest problems with data labeling or splitting). However, during early epochs, this could be a false positive.'
     _so_query = {'q': '[keras] validation accuracy high'}
     _md_solution = [
         'A high validation accuracy (around 100%) can indicate a problem with data labels, overlap between the training and validation data, or differences in preparing data for training and evaluation.',
@@ -225,7 +244,10 @@ class OverconfidentValAccuracy(BaseErrorMessage):
 ERROR_KEYS = {
     'input_normalization': InputNotNormalizedError,
     'input_not_floating': InputNotFloatingError,
-    'nan_loss': NaNInLossError,
+    'input_wrong_shape': InputWrongShapeError,
+    'nan_input': NaNInInputError,
+    'lr_high': LRHighError,
+    'lr_low': LRLowError,
     'no_softmax': NoSoftmaxActivationError,
     'overfitting': OverfittingError,
     'overconfident_val': OverconfidentValAccuracy,
