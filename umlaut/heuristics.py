@@ -2,9 +2,12 @@ import re
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.python.client import device_lib
+from termcolor import colored
 
 import umlaut.errors
+
+def _print_warning(message):
+    print(colored('WARNING: ', 'red'), colored(message, 'yellow'))
 
 def _get_acc_key(logs, val=False):
     key = ''
@@ -50,7 +53,7 @@ def run_epoch_heuristics(epoch, model, logs, model_input, source_module):
     errors_raised.append(check_nan_in_loss(epoch, model, model_input, logs))
     errors_raised.append(check_learning_rate_range(epoch, model))
     errors_raised.append(check_overfitting(epoch, model, logs))
-    errors_raised.append(check_high_validation_acc(epoch, model, logs))
+    errors_raised.append(check_high_validation_acc(epoch, logs))
     return errors_raised
 
 
@@ -63,17 +66,16 @@ def check_validation_is_added_to_fit(logs, source_module):
 
 
 def check_input_shape(epoch, x_train):
+    #TODO x_train is actually model_input (from last batch)
     if x_train is None:
-        print('Warning: train data not provided to umlaut, skipping heuristics')
+        _print_warning('train data not provided to umlaut, skipping heuristics')
         return
-    if 'GPU' in str(device_lib.list_local_devices()):
-        # GPUs prefer NCHW
-        if len(x_train.shape) == 4 and x_train.shape[2] != x_train.shape[3]:
-            remark = f'Epoch {epoch}: GPU present and input shape is not H,C,H,W. Instead got {x_train.shape}'
+    if K.image_data_format() == 'channels_first':
+        if len(x_train.shape) == 4 and x_train.shape[1] != x_train.shape[2]:
+            remark = f'Epoch {epoch}: Input shape is not H,C,H,W. Instead got {x_train.shape}'
             return umlaut.errors.InputWrongShapeError(epoch, remark)
-    elif len(x_train.shape) == 4 and x_train.shape[1] != x_train.shape[2]:
-        # CPUs prefer NHWC
-        remark = f'Epoch {epoch}: no GPU present and input shape is not N,H,W,C. Instead got {x_train.shape}'
+    elif len(x_train.shape) == 4 and x_train.shape[2] != x_train.shape[3]:
+        remark = f'Epoch {epoch}: Input shape is not N,H,W,C. Instead got {x_train.shape}'
         return umlaut.errors.InputWrongShapeError(epoch, remark)
 
 
@@ -96,9 +98,10 @@ def check_input_normalization(epoch, x_train, source_module):
 def check_input_is_floating(epoch, model, x_train, source_module):
     '''Returns an `InputNotFloatingError` if input is not floating.
     '''
+    #TODO x_train is actually model_input (from last batch)
     # x_train is a numpy object, not a tensor
     if x_train is None:
-        print('Warning: train data not provided to umlaut, skipping heuristics')
+        _print_warning('train data not provided to umlaut, skipping heuristics')
         return
     if not tf.as_dtype(x_train.dtype).is_floating:
         remarks = f'Epoch {epoch}: Input type is {x_train.dtype}'
@@ -109,10 +112,11 @@ def check_input_is_floating(epoch, model, x_train, source_module):
 def check_nan_in_loss(epoch, model, x_train, logs):
     '''Returns a NanInLossError if loss is NaN.
     '''
+    #TODO x_train is actually model_input (from last batch)
     loss = logs['loss']
     if np.isnan(loss):
         if x_train is None:
-            print('Warning: train data not provided to umlaut, skipping heuristics')
+            _print_warning('train data not provided to umlaut, skipping heuristics')
         elif any(np.isnan(x_train)):
             return umlaut.errors.NaNInInputError(epoch)
 
@@ -158,7 +162,10 @@ def check_overfitting(epoch, model, logs):
             return umlaut.errors.OverfittingError(epoch, remark)
 
 
-def check_high_validation_acc(epoch, model, logs):
+def check_high_validation_acc(epoch, logs):
+    if epoch < 3:
+        # validation accuracy can be a bit random at first, ignore the noise
+        return
     val_acc = logs[_get_acc_key(logs, val=True)]
     train_acc = logs[_get_acc_key(logs)]
     remark = ''

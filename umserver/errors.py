@@ -159,11 +159,11 @@ class InputNotNormalizedError(BaseErrorMessage):
     ]
     
 class InputWrongShapeError(BaseErrorMessage):
-    title = 'Potential input shape error'
-    subtitle = 'Your inputs potentially has the wrong shape.'
+    title = 'Image data may have incorrect shape'
+    subtitle = 'Input image data '
     _md_description = [
-        'We detected that your input is 4-dimensional with 2 equal dimensions, which is typically an image type. However, most keras layers by default expects your image data to be formatted as (Batch_size, Height, Width, Channel) if using a GPU, or (Batch_size, Channel, Height, Width) if using a CPU.',
-        'You can transpose your input data using `tf.transpose(x_train, [0, 2, 3, 1])`.',
+        'Your input is 4-dimensional with 2 equal dimensions, which is typically an image type. Most keras layers by default expect image data to be formatted as "NHWC" (Batch_size, Height, Width, Channel) unless otherwise specified. If running on CPU, setting the Keras image backend to \'channels_first\' and using "NCHW" (Batch_size, Channel, Height, Width) may sometimes improve performance.',
+        'You can transpose your input data to move your channels last using `tf.transpose(X_train_images, [0, 2, 3, 1])`.',
     ]
 
 class InputNotFloatingError(BaseErrorMessage):
