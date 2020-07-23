@@ -21,7 +21,7 @@ class UmlautClient:
 
     def get_session_id_from_name(self, session_name):
         r = requests.get(
-            f'http://{self.host}/api/getSessionIdFromName/{session_name}',
+            f'http://{self.host}/api/getSessionIdFromUniqueName/{session_name}',
         )
         r.raise_for_status()
         return r.text

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import bson
+import re
 from bson import ObjectId
 from datetime import datetime as dt
 from flask import abort
@@ -28,6 +29,27 @@ def get_sessionid_str_from_name(sess_name):
         return_document=ReturnDocument.AFTER,
     )
     return str(ses['_id'])  # return string from ObjectId
+
+
+@server.route('/api/getSessionIdFromUniqueName/<sess_name>', methods=['GET'])
+def get_session_id_from_making_unique_name(sess_name):
+    '''Find a session named session_name, otherwise make it.
+    
+    If one already exists, add a (safely incremented) _{int} to the end.
+    '''
+    ses_candidates = list(db.sessions.find({'name': {'$regex': sess_name + '(?:_\d+)?$'}}))
+    if not ses_candidates:
+        return get_sessionid_str_from_name(sess_name)
+    max_incr = 0
+    for s in ses_candidates:
+        s = s['name']
+        incr = re.search('_(\d+)$', s)
+        if incr:
+            incr = int(incr[1])
+            if incr > max_incr:
+                max_incr = incr
+    sess_name = sess_name + f'_{max_incr + 1}'
+    return get_sessionid_str_from_name(sess_name)
 
 
 @server.route('/api/updateSessionPlots/<sess_id>', methods=['POST'])
