@@ -184,7 +184,9 @@ def check_missing_activations(model):
         layer_config = layer.get_config()
         if 'activation' in layer_config:
             if layer_config['activation'] == 'linear':
+                if i == len(model.layers) - 2 and model.layers[-1].name == 'softmax':
+                    continue
                 err_layers.append((i, layer.name))
     if err_layers:
-        remark = '\n'.join([f'Layer {l[0]} ({l[1]}) has a missing or linear activation' for l in err_layers])
-        return umlaut.errors.MissingActivationError(remark)
+        remarks = '\n'.join([f'Layer {l[0]} ({l[1]}) has a missing or linear activation' for l in err_layers])
+        return umlaut.errors.MissingActivationError(remarks=remarks)
