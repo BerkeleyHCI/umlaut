@@ -12,7 +12,7 @@ def get_training_sessions():
             'label': sess['name'],
             'value': str(sess['_id']),
         })
-    return sessions
+    return sessions[::-1]
 
 
 __all__ = ['db']
