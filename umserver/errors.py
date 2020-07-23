@@ -207,6 +207,26 @@ class NaNInInputError(BaseErrorMessage):
     ]
 
 
+class MissingActivationError(BaseErrorMessage):
+    title = 'Missing activation functions'
+    subtitle = 'The model has layers without nonlinear activation functions. This may limit the model\'s ability to learn since stacked `Dense` layers without activations will mathematically collapse to a single `Dense` layer.'
+    _md_solution = [
+        'Make sure the `activation` argument is passed into your `Dense` and Convolutional (e.g., `Conv2D`) layers.',
+        'A common practice is to use `activation=\'relu\'`.'
+    ]
+    _docs_url = 'https://www.tensorflow.org/api_docs/python/tf/keras/activations'
+
+    def get_annotations(self):
+        return None  # static check, no annotations
+
+    def __init__(self, epochs, remarks=None, module_url=None, *args, **kwargs):
+        # set epochs to None
+        self.epochs = None
+        self.remarks = remarks
+        self.module_url = module_url
+
+
+
 class NoSoftmaxActivationError(BaseErrorMessage):
     title = 'Missing Softmax layer before loss'
     subtitle = 'The loss function of your model expects a probability distribution as input (i.e., the likelihood for all the classes sums to 1), but your model is producing un-normalized outputs, called "logits". Logits can be normalized to a probability distribution with a [softmax](https://www.tensorflow.org/api_docs/python/tf/keras/layers/Softmax) layer.'
@@ -222,7 +242,7 @@ class NoSoftmaxActivationError(BaseErrorMessage):
     def get_annotations(self):
         return None  # static check, no annotations
 
-    def __init__(self, remarks=None, module_url=None, *args, **kwargs):
+    def __init__(self, epochs, remarks=None, module_url=None, *args, **kwargs):
         # set epochs to None
         self.epochs = None
         self.remarks = remarks
@@ -259,26 +279,6 @@ class OverfittingError(BaseErrorMessage):
         'Try reducing the power of your model or adding regularization. You can reduce the power of your model by decreasing the `units` or `filters` parameters of `Dense` or `Conv2D` layers.',
         'Regularization penalizes weights which are high in magnitude. You can try adding L2 or L1 regularization by using a [regularizer](https://www.tensorflow.org/api_docs/python/tf/keras/regularizers).'
     ]
-
-
-class MissingActivationError(BaseErrorMessage):
-    title = 'Missing activation functions'
-    subtitle = 'The model has layers without nonlinear activation functions. This may limit the model\'s ability to learn since stacked `Dense` layers without activations will mathematically collapse to a single `Dense` layer.'
-    _md_solution = [
-        'Make sure the `activation` argument is passed into your `Dense` and Convolutional (e.g., `Conv2D`) layers.',
-        'A common practice is to use `activation=\'relu\'`.'
-    ]
-    _docs_url = 'https://www.tensorflow.org/api_docs/python/tf/keras/activations'
-
-    def get_annotations(self):
-        return None  # static check, no annotations
-
-    def __init__(self, remarks=None, *args, **kwargs):
-        # set epochs to None
-        self.epochs = None
-        self.remarks = remarks
-        self.module_url = None
-
 
 
 ERROR_KEYS = {
