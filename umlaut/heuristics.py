@@ -72,10 +72,10 @@ def check_input_shape(epoch, x_train):
         _print_warning('train data not provided to umlaut, skipping heuristics')
         return
     if K.image_data_format() == 'channels_first':
-        if len(x_train.shape) == 4 and x_train.shape[1] != x_train.shape[2]:
+        if len(x_train.shape) == 4 and x_train.shape[2] != x_train.shape[3]:
             remark = f'Epoch {epoch}: Input shape is not H,C,H,W. Instead got {x_train.shape}'
             return umlaut.errors.InputWrongShapeError(epoch, remark)
-    elif len(x_train.shape) == 4 and x_train.shape[2] != x_train.shape[3]:
+    elif len(x_train.shape) == 4 and x_train.shape[1] != x_train.shape[2]:
         remark = f'Epoch {epoch}: Input shape is not N,H,W,C. Instead got {x_train.shape}'
         return umlaut.errors.InputWrongShapeError(epoch, remark)
 
