@@ -18,6 +18,7 @@ REMARKS_STYLE = {
     'marginBottom': '-4px',
 }
 
+
 def get_error_color(error_idx):
     '''Make a qualitative color range for 4 colors (90 degrees)'''
     return f'hsl({(25 + 90*error_idx) % 360}, 95%, 80%)'
@@ -158,6 +159,7 @@ class InputNotNormalizedError(BaseErrorMessage):
         '`training_images = (training_images / 128.0) - 1`',
     ]
     
+
 class InputWrongShapeError(BaseErrorMessage):
     title = 'Image data may have incorrect shape'
     subtitle = 'Input image data '
@@ -165,6 +167,7 @@ class InputWrongShapeError(BaseErrorMessage):
         'Your input is 4-dimensional with 2 equal dimensions, which is typically an image type. Most keras layers by default expect image data to be formatted as "NHWC" (Batch_size, Height, Width, Channel) unless otherwise specified. If running on CPU, setting the Keras image backend to \'channels_first\' and using "NCHW" (Batch_size, Channel, Height, Width) may sometimes improve performance.',
         'You can transpose your input data to move your channels last using `tf.transpose(X_train_images, [0, 2, 3, 1])`.',
     ]
+
 
 class InputNotFloatingError(BaseErrorMessage):
     title = 'Input is not a Float type'
@@ -182,10 +185,14 @@ class LRError(BaseErrorMessage):
         'You can set your learning rate when you create your optimizer object. Typical learning rates for the Adam optimizer are between 0.00001 and 0.01. For example:',
         '`model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001))`',
     ]
+    _docs_url = 'https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/Adam'
+
+
 class LRHighError(LRError):
     title = 'Learning Rate is too high'
     subtitle = 'The learning rate you set is higher than the typical range. This could lead to the model\'s inability to learn.'
     
+
 class LRLowError(LRError):
     title = 'Learning Rate is too low'
     subtitle = 'The learning rate you set is lower than the typical range. This could lead to the model\'s inability to learn.'
@@ -198,6 +205,7 @@ class NaNInInputError(BaseErrorMessage):
     _md_solution = [
         'Please double check your input and make sure no NaN exists in it.',
     ]
+
 
 class NoSoftmaxActivationError(BaseErrorMessage):
     title = 'Missing Softmax layer before loss'
@@ -241,6 +249,38 @@ class OverconfidentValAccuracy(BaseErrorMessage):
         'Check to see how the model performs on the test set (data the model has not seen before). If the test accuracy is similarly high, inspect the predictions by hand and ensure they make sense.',
     ]
 
+
+class OverfittingError(BaseErrorMessage):
+    title = 'Possible overfitting'
+    subtitle = 'The validation loss is increasing while training loss is stuck or decreasing. This could indicate overfitting. However, if validation loss is still trending downwards afterwards, this error could be a false positive.'
+    _so_query = {'q': '[keras] is:closed regularization'}
+    _docs_url = 'https://www.tensorflow.org/api_docs/python/tf/keras/regularizers/Regularizer'
+    _md_solution = [
+        'Try reducing the power of your model or adding regularization. You can reduce the power of your model by decreasing the `units` or `filters` parameters of `Dense` or `Conv2D` layers.',
+        'Regularization penalizes weights which are high in magnitude. You can try adding L2 or L1 regularization by using a [regularizer](https://www.tensorflow.org/api_docs/python/tf/keras/regularizers).'
+    ]
+
+
+class MissingActivationError(BaseErrorMessage):
+    title = 'Missing activation functions'
+    subtitle = 'The model has layers without nonlinear activation functions. This may limit the model\'s ability to learn since stacked `Dense` layers without activations will mathematically collapse to a single `Dense` layer.'
+    _md_solution = [
+        'Make sure the `activation` argument is passed into your `Dense` and Convolutional (e.g., `Conv2D`) layers.',
+        'A common practice is to use `activation=\'relu\'`.'
+    ]
+    _docs_url = 'https://www.tensorflow.org/api_docs/python/tf/keras/activations'
+
+    def get_annotations(self):
+        return None  # static check, no annotations
+
+    def __init__(self, remarks=None, *args, **kwargs):
+        # set epochs to None
+        self.epochs = None
+        self.remarks = remarks
+        self.module_url = None
+
+
+
 ERROR_KEYS = {
     'input_normalization': InputNotNormalizedError,
     'input_not_floating': InputNotFloatingError,
@@ -251,6 +291,7 @@ ERROR_KEYS = {
     'no_softmax': NoSoftmaxActivationError,
     'overfitting': OverfittingError,
     'overconfident_val': OverconfidentValAccuracy,
+    'missing_activations': MissingActivationError,
 }
 
 # assign id strings to error messages as a backref

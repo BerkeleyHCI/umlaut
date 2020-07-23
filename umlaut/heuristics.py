@@ -42,6 +42,7 @@ def _get_module_ref_from_pattern(pattern, source_module):
 def run_pretrain_heuristics(model, source_module):
     errors_raised = []
     errors_raised.append(check_softmax_computed_before_loss(model, source_module))
+    errors_raised.append(check_missing_activations(model))
     return errors_raised
 
 
@@ -177,5 +178,13 @@ def check_high_validation_acc(epoch, logs):
         return umlaut.errors.OverconfidentValAccuracy(epoch, remark)
 
 
-def check_initialization(epoch, model, logs):
-    NotImplemented
+def check_missing_activations(model):
+    err_layers = []
+    for i, layer in enumerate(model.layers[:-1]):
+        layer_config = layer.get_config()
+        if 'activation' in layer_config:
+            if layer_config['activation'] == 'linear':
+                err_layers.append((i, layer.name))
+    if err_layers:
+        remark = '\n'.join([f'Layer {l[0]} ({l[1]}) has a missing or linear activation' for l in err_layers])
+        return umlaut.errors.MissingActivationError(remark)
