@@ -53,7 +53,7 @@ def get_module_ref_from_pattern(pattern, source_module):
 def run_pretrain_heuristics(model, source_module):
     errors_raised = []
     errors_raised.append(check_softmax_computed_before_loss(model, source_module))
-    errors_raised.append(check_missing_activations(model))
+    errors_raised.append(check_missing_activations(model, source_module))
     return errors_raised
 
 
@@ -129,7 +129,7 @@ def check_nan_in_loss(epoch, x_train, logs):
     if np.isnan(loss):
         if x_train is None:
             _print_warning('train data not provided to umlaut, skipping heuristics')
-        elif any(np.isnan(x_train)):
+        elif np.isnan(x_train).any():
             return umlaut.errors.NaNInInputError(epoch)
 
 
@@ -198,4 +198,4 @@ def check_missing_activations(model, source_module):
     if err_layers:
         remarks = '\n'.join([f'Layer {l[0]} ({l[1]}) has a missing or linear activation' for l in err_layers])
         module_ref = get_model_construction_vscode_link(source_module)
-        return umlaut.errors.MissingActivationError(remarks=remarks, module_url=module_ref)
+        return umlaut.errors.MissingActivationError(epochs=None, remarks=remarks, module_url=module_ref)
