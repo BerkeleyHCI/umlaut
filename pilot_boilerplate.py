@@ -17,7 +17,7 @@ cb = UmlautCallback(
 
 model.compile(
     optimizer='adam',
-    loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+    loss=tf.keras.losses.sparse_categorical_crossentropy,
     metrics=['accuracy'],
 )
 
@@ -25,7 +25,7 @@ model.compile(
 model.fit(
     train_images,
     train_labels,
-    epochs=5,
+    epochs=15,
     batch_size=256,
     callbacks=[cb],
     validation_data=(train_images[:100], train_labels[:100])

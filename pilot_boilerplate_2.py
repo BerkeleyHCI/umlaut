@@ -7,8 +7,8 @@ test_images = test_images / 255.0
 
 model = tf.keras.Sequential([
     tf.keras.layers.Flatten(),
-    tf.keras.layers.Dense(256, activation='relu'),
-    tf.keras.layers.Dense(256, activation='relu'),
+    tf.keras.layers.Dense(256),
+    tf.keras.layers.Dense(256),
     tf.keras.layers.Dense(10),
 ])
 
@@ -19,7 +19,7 @@ cb = UmlautCallback(
 
 model.compile(
     optimizer=tf.keras.optimizers.SGD(learning_rate=-1e5),
-    loss=tf.keras.losses.sparse_categorical_crossentropy,
+    loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=['accuracy'],
 )
 
