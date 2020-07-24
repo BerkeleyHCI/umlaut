@@ -234,9 +234,9 @@ class NoSoftmaxActivationError(BaseErrorMessage):
     _docs_url = 'https://www.tensorflow.org/api_docs/python/tf/keras/losses'
     _md_solution = [
         'Many Keras loss function [classes](https://www.tensorflow.org/api_docs/python/tf/keras/losses) can automatically compute softmax for you by passing in a `from_logits` flag:',
-        '`tf.keras.losses.<your loss function here>(from_logits=True)`',
+        '`tf.keras.losses.<your loss function class here>(from_logits=True)`',
         'where specifying `from_logits=True` will tell keras to apply softmax to your model output before calculating the loss function.',
-        'Alternatively, you can manually add a softmax layer to the end of your model using `tf.keras.Softmax()`.',
+        'Alternatively, you can manually add a softmax layer to the end of your model using `tf.keras.layers.Softmax()`.',
     ]
 
     def get_annotations(self):
