@@ -190,12 +190,12 @@ class LRError(BaseErrorMessage):
 
 class LRHighError(LRError):
     title = 'Learning Rate is too high'
-    subtitle = 'The learning rate you set is higher than the typical range. This could lead to the model\'s inability to learn.'
+    subtitle = 'The learning rate you set is higher than the typical range. This could lead to the model\'s inability to learn. This can also lead to NaN loss values.'
     
 
 class LRLowError(LRError):
     title = 'Learning Rate is too low'
-    subtitle = 'The learning rate you set is lower than the typical range. This could lead to the model\'s inability to learn.'
+    subtitle = 'The learning rate you set is lower than the typical range. This could lead to the model\'s inability to learn. This can also lead to NaN loss values.'
     
 
 class NaNInInputError(BaseErrorMessage):
