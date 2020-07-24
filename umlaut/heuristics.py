@@ -6,8 +6,10 @@ from termcolor import colored
 
 import umlaut.errors
 
+
 def _print_warning(message):
     print(colored('WARNING: ', 'red'), colored(message, 'yellow'))
+
 
 def _get_acc_key(logs, val=False):
     key = ''
@@ -31,7 +33,16 @@ def _make_vscode_url(line_match, source_module_path):
     return f'{source_module_path}:{line_match[0]+1}:{line_match[1].start()+1}'
 
 
-def _get_module_ref_from_pattern(pattern, source_module):
+def get_model_construction_vscode_link(source_module):
+    line_matches = _search_source_module('model\.add', source_module['contents'])[::-1]
+    if not line_matches:
+        line_matches = _search_source_module('tf\.keras\.Model', source_module['contents'])
+    if not line_matches:
+        line_matches = _search_source_module('tf\.keras\.Sequential', source_module['contents'])
+    return _make_vscode_url(line_matches[0], source_module['path'])
+
+
+def get_module_ref_from_pattern(pattern, source_module):
     line_matches = _search_source_module(pattern, source_module['contents'])
     if line_matches:
         return _make_vscode_url(line_matches[0], source_module['path'])
@@ -50,8 +61,8 @@ def run_epoch_heuristics(epoch, model, logs, model_input, source_module):
     errors_raised = []
     errors_raised.append(check_input_shape(epoch, model_input))
     errors_raised.append(check_input_normalization(epoch, model_input, source_module))
-    errors_raised.append(check_input_is_floating(epoch, model, model_input, source_module))
-    errors_raised.append(check_nan_in_loss(epoch, model, model_input, logs))
+    errors_raised.append(check_input_is_floating(epoch, model_input, source_module))
+    errors_raised.append(check_nan_in_loss(epoch, model_input, logs))
     errors_raised.append(check_learning_rate_range(epoch, model))
     errors_raised.append(check_overfitting(epoch, model, logs))
     errors_raised.append(check_high_validation_acc(epoch, logs))
@@ -92,11 +103,11 @@ def check_input_normalization(epoch, x_train, source_module):
     if x_max > 1:
         remark = remark + f'Epoch {epoch}: maximum input value is {x_max}, greater than the typical value of 1.'
     if remark:
-        module_ref = _get_module_ref_from_pattern('model\.fit', source_module)
+        module_ref = get_module_ref_from_pattern('model\.fit', source_module)
         return umlaut.errors.InputNotNormalizedError(epoch, remark, module_ref)
 
 
-def check_input_is_floating(epoch, model, x_train, source_module):
+def check_input_is_floating(epoch, x_train, source_module):
     '''Returns an `InputNotFloatingError` if input is not floating.
     '''
     #TODO x_train is actually model_input (from last batch)
@@ -106,11 +117,11 @@ def check_input_is_floating(epoch, model, x_train, source_module):
         return
     if not tf.as_dtype(x_train.dtype).is_floating:
         remarks = f'Epoch {epoch}: Input type is {x_train.dtype}'
-        module_ref = _get_module_ref_from_pattern('model\.fit', source_module)
+        module_ref = get_module_ref_from_pattern('model\.fit', source_module)
         return umlaut.errors.InputNotFloatingError(epoch, remarks, module_ref)
 
 
-def check_nan_in_loss(epoch, model, x_train, logs):
+def check_nan_in_loss(epoch, x_train, logs):
     '''Returns a NanInLossError if loss is NaN.
     '''
     #TODO x_train is actually model_input (from last batch)
@@ -132,13 +143,8 @@ def check_softmax_computed_before_loss(model, source_module):
         from_logits = model.loss._fn_kwargs.get('from_logits', False)
     last_layer_is_softmax = isinstance(model.layers[-1], tf.keras.layers.Softmax)
     if not last_layer_is_softmax and not from_logits:
-        line_matches = _search_source_module('model\.add', source_module['contents'])[::-1]
-        if not line_matches:
-            line_matches = _search_source_module('tf\.keras\.Model', source_module['contents'])
-        if not line_matches:
-            line_matches = _search_source_module('tf\.keras\.Sequential', source_module['contents'])
-        return umlaut.errors.NoSoftmaxActivationError(module_url=_make_vscode_url(line_matches[0], source_module['path']))
-
+        module_ref = get_model_construction_vscode_link(source_module)
+        return umlaut.errors.NoSoftmaxActivationError(module_url=module_ref)
 
 def check_learning_rate_range(epoch, model):
     lr = K.eval(model.optimizer.lr)
@@ -178,7 +184,9 @@ def check_high_validation_acc(epoch, logs):
         return umlaut.errors.OverconfidentValAccuracy(epoch, remark)
 
 
-def check_missing_activations(model):
+def check_missing_activations(model, source_module):
+    '''Raises a MissingActivationError if there are linear activations between layers.
+    '''
     err_layers = []
     for i, layer in enumerate(model.layers[:-1]):
         layer_config = layer.get_config()
@@ -189,4 +197,5 @@ def check_missing_activations(model):
                 err_layers.append((i, layer.name))
     if err_layers:
         remarks = '\n'.join([f'Layer {l[0]} ({l[1]}) has a missing or linear activation' for l in err_layers])
-        return umlaut.errors.MissingActivationError(remarks=remarks)
+        module_ref = get_model_construction_vscode_link(source_module)
+        return umlaut.errors.MissingActivationError(remarks=remarks, module_url=module_ref)
