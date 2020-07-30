@@ -34,7 +34,7 @@ class UmlautClient:
         val = any(k.startswith('val') for k in logs)
         acc = [k for k in logs if k.startswith('acc')]
         if acc:
-            acc = acc[0]
+            acc = acc[0]  # 'acc' or 'accuracy' if tf2/1
         metrics_dict = {
             'loss': {
                 'train': [batch, float(logs['loss'])],

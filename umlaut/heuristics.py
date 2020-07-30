@@ -54,6 +54,7 @@ def run_pretrain_heuristics(model, source_module):
     errors_raised = []
     errors_raised.append(check_softmax_computed_before_loss(model, source_module))
     errors_raised.append(check_missing_activations(model, source_module))
+    errors_raised = list(filter(None, errors_raised))
     return errors_raised
 
 
@@ -66,6 +67,7 @@ def run_epoch_heuristics(epoch, model, logs, model_input, source_module):
     errors_raised.append(check_learning_rate_range(epoch, model))
     errors_raised.append(check_overfitting(epoch, model, logs))
     errors_raised.append(check_high_validation_acc(epoch, logs))
+    errors_raised = list(filter(None, errors_raised))
     return errors_raised
 
 

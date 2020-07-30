@@ -4,6 +4,7 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 import traceback as tb
 import types
+from termcolor import colored
 
 from umlaut.client import UmlautClient
 from umlaut.heuristics import run_epoch_heuristics
@@ -12,6 +13,7 @@ from umlaut.heuristics import run_pretrain_heuristics
 class UmlautCallback(tf.keras.callbacks.Callback):
     def __init__(self, model, session_name=None, host='localhost', offline=False):
 
+        #TODO need a case where we can't extract the frame, set to None
         self._source_module_path = tb.extract_stack()[-2].filename
         with open(self._source_module_path, 'r') as f:
             self._source_module_contents = f.read().splitlines()
@@ -50,21 +52,23 @@ class UmlautCallback(tf.keras.callbacks.Callback):
 
     def on_train_begin(self, logs=None):
         errors = run_pretrain_heuristics(self.model, self.source_module)
-        print(list(filter(None, errors)) or 'No pretrain errors!')
-        if errors and self.umlaut_client:
-            self.umlaut_client.send_errors(errors)
+        if errors:
+            print(colored(errors, 'red'))
+            if self.umlaut_client:
+                self.umlaut_client.send_errors(errors)
 
 
     def on_epoch_end(self, batch, logs=None):
         if self.umlaut_client:
             self.umlaut_client.send_logs_to_server(batch, logs)
 
-        print('\nRunning Umlaut checks...')
         model_input = K.eval(self.input_node)
         errors = run_epoch_heuristics(batch, self.model, logs, model_input, self.source_module)
-        print(list(filter(None, errors)) or 'No errors!')
-        if errors and self.umlaut_client:
-            self.umlaut_client.send_errors(errors)
+        if errors:
+            print()
+            print(colored(errors, 'red'))
+            if self.umlaut_client:
+                self.umlaut_client.send_errors(errors)
 
 
     def register_model(self, model):
@@ -95,9 +99,6 @@ class UmlautCallback(tf.keras.callbacks.Callback):
                 return out
 
             new_call = v1_compat_call
-            
             model.call = types.MethodType(new_call, model)
-            return
-
 
         model.call = types.MethodType(new_call, model)
