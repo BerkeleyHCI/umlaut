@@ -149,7 +149,7 @@ class BaseErrorMessage:
 
 
 class InputNotNormalizedError(BaseErrorMessage):
-    title = 'Input data exceeds typical limits'
+    title = 'Error: Input data exceeds typical limits'
     subtitle = 'Your input data does not look normalized.'
     _so_query = {'q': '[keras] closed:yes normalization'}
     _docs_url = 'https://www.tensorflow.org/tutorials/keras/classification#preprocess_the_data'
@@ -161,7 +161,7 @@ class InputNotNormalizedError(BaseErrorMessage):
     
 
 class InputWrongShapeError(BaseErrorMessage):
-    title = 'Image data may have incorrect shape'
+    title = 'Error: Image data may have incorrect shape'
     subtitle = 'Input image data '
     _md_description = [
         'Your input is 4-dimensional with 2 equal dimensions, which is typically an image type. Most keras layers by default expect image data to be formatted as "NHWC" (Batch_size, Height, Width, Channel) unless otherwise specified. If running on CPU, setting the Keras image backend to \'channels_first\' and using "NCHW" (Batch_size, Channel, Height, Width) may sometimes improve performance.',
@@ -170,7 +170,7 @@ class InputWrongShapeError(BaseErrorMessage):
 
 
 class InputNotFloatingError(BaseErrorMessage):
-    title = 'Input is not a Float type'
+    title = 'Error: Input is not a Float type'
     subtitle = 'Your input is not a floating type.'
     _so_query = {'q': '[keras] closed:yes float'}
     _docs_url = 'https://www.tensorflow.org/tutorials/keras/classification#preprocess_the_data'
@@ -189,17 +189,17 @@ class LRError(BaseErrorMessage):
 
 
 class LRHighError(LRError):
-    title = 'Learning Rate is too high'
+    title = 'Warning: Learning Rate is high'
     subtitle = 'The learning rate you set is higher than the typical range. This could lead to the model\'s inability to learn. This can also lead to NaN loss values.'
     
 
 class LRLowError(LRError):
-    title = 'Learning Rate is too low'
+    title = 'Warning: Learning Rate is low'
     subtitle = 'The learning rate you set is lower than the typical range. This could lead to the model\'s inability to learn. This can also lead to NaN loss values.'
     
 
 class NaNInInputError(BaseErrorMessage):
-    title = 'NaN (Not a number) in input'
+    title = 'Critical: NaN (Not a number) in input'
     subtitle = 'Some values in your model input is NaN (could indicate infinity).'
     _so_query = {'q': '[keras] nan input'}
     _md_solution = [
@@ -208,7 +208,7 @@ class NaNInInputError(BaseErrorMessage):
 
 
 class MissingActivationError(BaseErrorMessage):
-    title = 'Missing activation functions'
+    title = 'Critical: Missing activation functions'
     subtitle = 'The model has layers without nonlinear activation functions. This may limit the model\'s ability to learn since stacked `Dense` layers without activations will mathematically collapse to a single `Dense` layer.'
     _md_solution = [
         'Make sure the `activation` argument is passed into your `Dense` and Convolutional (e.g., `Conv2D`) layers.',
@@ -228,7 +228,7 @@ class MissingActivationError(BaseErrorMessage):
 
 
 class NoSoftmaxActivationError(BaseErrorMessage):
-    title = 'Missing Softmax layer before loss'
+    title = 'Critical: Missing Softmax layer before loss'
     subtitle = 'The loss function of your model expects a probability distribution as input (i.e., the likelihood for all the classes sums to 1), but your model is producing un-normalized outputs, called "logits". Logits can be normalized to a probability distribution with a [softmax](https://www.tensorflow.org/api_docs/python/tf/keras/layers/Softmax) layer.'
     _so_query = {'q': '[keras] is:closed from_logits'}
     _docs_url = 'https://www.tensorflow.org/api_docs/python/tf/keras/losses'
@@ -249,19 +249,8 @@ class NoSoftmaxActivationError(BaseErrorMessage):
         self.module_url = module_url
 
 
-class OverfittingError(BaseErrorMessage):
-    title = 'Possible overfitting'
-    subtitle = 'The validation loss is increasing while training loss is stuck or decreasing. This could indicate overfitting. However, if validation loss is still trending downwards afterwards, this error could be a false positive.'
-    _so_query = {'q': '[keras] is:closed regularization'}
-    _docs_url = 'https://www.tensorflow.org/api_docs/python/tf/keras/regularizers/Regularizer'
-    _md_solution = [
-        'Try reducing the power of your model or adding regularization. You can reduce the power of your model by decreasing the `units` or `filters` parameters of `Dense` or `Conv2D` layers.',
-        'Regularization penalizes weights which are high in magnitude. You can try adding L2 or L1 regularization by using a [regularizer](https://www.tensorflow.org/api_docs/python/tf/keras/regularizers).'
-    ]
-
-
 class OverconfidentValAccuracy(BaseErrorMessage):
-    title = 'Check validation accuracy'
+    title = 'Warning: Check validation accuracy'
     subtitle = 'The validation accuracy is either higher than typical results (near 100%) or higher than training accuracy (which can suggest problems with data labeling or splitting). However, during early epochs, this could be a false positive.'
     _so_query = {'q': '[keras] validation accuracy high'}
     _md_solution = [
@@ -271,7 +260,7 @@ class OverconfidentValAccuracy(BaseErrorMessage):
 
 
 class OverfittingError(BaseErrorMessage):
-    title = 'Possible overfitting'
+    title = 'Warning: Possible overfitting'
     subtitle = 'The validation loss is increasing while training loss is stuck or decreasing. This could indicate overfitting. However, if validation loss is still trending downwards afterwards, this error could be a false positive.'
     _so_query = {'q': '[keras] is:closed regularization'}
     _docs_url = 'https://www.tensorflow.org/api_docs/python/tf/keras/regularizers/Regularizer'
