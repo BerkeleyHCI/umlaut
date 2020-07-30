@@ -18,7 +18,7 @@ cb = UmlautCallback(
 )
 
 model.compile(
-    optimizer=tf.keras.optimizers.SGD(learning_rate=-1e5),
+    optimizer=tf.keras.optimizers.Adam(learning_rate=-1e5),
     loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=['accuracy'],
 )
