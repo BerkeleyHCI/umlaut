@@ -270,6 +270,14 @@ class OverfittingError(BaseErrorMessage):
     ]
 
 
+class FinalLayerHasActivationError(BaseErrorMessage):
+    title = 'Warning: Last model layer has nonlinear activation'
+    subtitle = 'The last layer of the model has a nonlinear activation function before Softmax. This can clip gradient updates and prevent the model from learning.'
+    _md_solution = [
+        'Remove the `activation` argument from the last layer of your model.'
+    ]
+
+
 ERROR_KEYS = {
     'input_normalization': InputNotNormalizedError,
     'input_not_floating': InputNotFloatingError,
@@ -281,6 +289,7 @@ ERROR_KEYS = {
     'overfitting': OverfittingError,
     'overconfident_val': OverconfidentValAccuracy,
     'missing_activations': MissingActivationError,
+    'activation_final_layer': FinalLayerHasActivationError,
 }
 
 # assign id strings to error messages as a backref

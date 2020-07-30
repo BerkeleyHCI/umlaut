@@ -201,3 +201,16 @@ def check_missing_activations(model, source_module):
         remarks = '\n'.join([f'Layer {l[0]} ({l[1]}) has a missing or linear activation' for l in err_layers])
         module_ref = get_model_construction_vscode_link(source_module)
         return umlaut.errors.MissingActivationError(epochs=None, remarks=remarks, module_url=module_ref)
+
+
+def check_no_activation_last_layer(epoch, model, source_module):
+    last_layer = model.layers[-1]
+    if model.layers[-1].name == 'softmax':
+        last_layer = model.layers[-2]
+
+    layer_config = last_layer.get_config()
+    if 'activation' in layer_config:
+        if layer_config['activation'] != 'linear':
+            remark = f'''Last layer in model {layer.name} has activation "{layer_config['activation']}"'''
+            module_ref = get_model_construction_vscode_link(source_module)
+            return umlaut.errors.FinalLayerHasActivationError(epochs=epoch, remarks=remark, source_module=module_ref)
