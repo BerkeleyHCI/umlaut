@@ -277,6 +277,15 @@ class FinalLayerHasActivationError(BaseErrorMessage):
         'Remove the `activation` argument from the last layer of your model.'
     ]
 
+    def get_annotations(self):
+        return None  # static check, no annotations
+
+    def __init__(self, epochs, remarks=None, module_url=None, *args, **kwargs):
+        # set epochs to None
+        self.epochs = None
+        self.remarks = remarks
+        self.module_url = module_url
+
 
 ERROR_KEYS = {
     'input_normalization': InputNotNormalizedError,

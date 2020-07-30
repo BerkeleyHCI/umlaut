@@ -54,6 +54,7 @@ def run_pretrain_heuristics(model, source_module):
     errors_raised = []
     errors_raised.append(check_softmax_computed_before_loss(model, source_module))
     errors_raised.append(check_missing_activations(model, source_module))
+    errors_raised.append(check_no_activation_last_layer(model, source_module))
     errors_raised = list(filter(None, errors_raised))
     return errors_raised
 
@@ -203,7 +204,7 @@ def check_missing_activations(model, source_module):
         return umlaut.errors.MissingActivationError(epochs=None, remarks=remarks, module_url=module_ref)
 
 
-def check_no_activation_last_layer(epoch, model, source_module):
+def check_no_activation_last_layer(model, source_module):
     last_layer = model.layers[-1]
     if model.layers[-1].name == 'softmax':
         last_layer = model.layers[-2]
@@ -211,6 +212,6 @@ def check_no_activation_last_layer(epoch, model, source_module):
     layer_config = last_layer.get_config()
     if 'activation' in layer_config:
         if layer_config['activation'] != 'linear':
-            remark = f'''Last layer in model {layer.name} has activation "{layer_config['activation']}"'''
+            remark = f'''Last layer in model {last_layer.name} has activation "{layer_config['activation']}"'''
             module_ref = get_model_construction_vscode_link(source_module)
-            return umlaut.errors.FinalLayerHasActivationError(epochs=epoch, remarks=remark, source_module=module_ref)
+            return umlaut.errors.FinalLayerHasActivationError(epochs=None, remarks=remark, module_url=module_ref)
