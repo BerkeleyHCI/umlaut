@@ -70,13 +70,18 @@ class BaseErrorMessage:
         'error-msg-btn-annotate' which are used by callbacks.
         '''
         error_fmt = [
-            html.Span(id={'type': 'error-msg-indicator', 'index': error_index}, style={
-                'backgroundColor': get_error_color(error_index),
-                'borderRadius': '50%',
-                'marginRight': '5px',
-                'display': 'inline-block',
-            }),
-            html.H3(self.title, style={'display': 'inline-block'}),
+            html.Span(
+                [
+                    html.Span(id={'type': 'error-msg-indicator', 'index': error_index}, style={
+                        'backgroundColor': get_error_color(error_index),
+                        'borderRadius': '50%',
+                        'marginRight': '5px',
+                        'display': 'inline-block',
+                    }),
+                    html.H3(self.title, style={'display': 'inline-block'}),
+                ],
+                style={'cursor': 'pointer'},
+            ),
             dcc.Markdown(self.subtitle),
         ]
 
@@ -124,7 +129,7 @@ class BaseErrorMessage:
         return html.Div(
             error_fmt,
             id={'type': 'error-msg', 'index': error_index},
-            style={'cursor': 'pointer', 'display': 'inline-block'},
+            style={'display': 'inline-block'},
         )
 
     def __init__(
