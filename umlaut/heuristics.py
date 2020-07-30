@@ -144,7 +144,7 @@ def check_softmax_computed_before_loss(model, source_module):
     last_layer_is_softmax = isinstance(model.layers[-1], tf.keras.layers.Softmax)
     if not last_layer_is_softmax and not from_logits:
         module_ref = get_model_construction_vscode_link(source_module)
-        return umlaut.errors.NoSoftmaxActivationError(module_url=module_ref)
+        return umlaut.errors.NoSoftmaxActivationError(None, module_url=module_ref)
 
 def check_learning_rate_range(epoch, model):
     lr = K.eval(model.optimizer.lr)
