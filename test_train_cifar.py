@@ -1,5 +1,4 @@
 import tensorflow as tf
-from tensorflow.python.keras.layers.convolutional import UpSampling2D
 from umlaut import UmlautCallback
 
 (train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.cifar10.load_data()
@@ -25,8 +24,8 @@ model = tf.keras.Sequential([
 
 cb = UmlautCallback(
     model,
-    session_name='clean_session',
-    offline=True,
+    session_name='cifar',
+    # offline=True,
 )
 
 model.compile(
@@ -41,7 +40,7 @@ model.compile(
 model.fit(
     train_images,
     train_labels,
-    epochs=15,
+    epochs=10,
     batch_size=128,
     callbacks=[cb],
     # validation_data=(train_images[:100], train_labels[:100])  # cross train/val data
