@@ -150,7 +150,7 @@ class BaseErrorMessage:
         return '\n'.join((self.title, self.description))
 
     def __repr__(self):
-        return f'<ERROR: {self.title}>'
+        return f'<{self.title}>'
 
 
 class InputNotNormalizedError(BaseErrorMessage):

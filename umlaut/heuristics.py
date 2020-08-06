@@ -39,7 +39,9 @@ def get_model_construction_vscode_link(source_module):
         line_matches = _search_source_module('tf\.keras\.Model', source_module['contents'])
     if not line_matches:
         line_matches = _search_source_module('tf\.keras\.Sequential', source_module['contents'])
-    return _make_vscode_url(line_matches[0], source_module['path'])
+    if line_matches:
+        return _make_vscode_url(line_matches[0], source_module['path'])
+    _print_warning('Could not find module path.')
 
 
 def get_module_ref_from_pattern(pattern, source_module):
