@@ -15,8 +15,8 @@ model = tf.keras.Sequential([
     tf.keras.layers.MaxPool2D(2),
     tf.keras.layers.Dropout(0.2),
     tf.keras.layers.Flatten(),
-    tf.keras.layers.Dense(256, activation='relu'),
-    tf.keras.layers.Dense(256, activation='relu'),
+    tf.keras.layers.Dense(128, activation='relu'),
+    tf.keras.layers.Dense(128, activation='relu'),
     tf.keras.layers.Dropout(0.2),
     tf.keras.layers.Dense(10),
     # tf.keras.layers.Softmax(),
@@ -25,7 +25,7 @@ model = tf.keras.Sequential([
 cb = UmlautCallback(
     model,
     session_name='cifar',
-    # offline=True,
+    offline=True,
 )
 
 model.compile(
@@ -46,8 +46,6 @@ model.fit(
     # validation_data=(train_images[:100], train_labels[:100])  # cross train/val data
     validation_split=0.2,  # add validation for val metrics
 )
-
-model.summary()
 
 results = model.evaluate(test_images, test_labels, batch_size=4096)
 print('test loss, test acc: ', results)

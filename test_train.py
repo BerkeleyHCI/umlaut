@@ -9,7 +9,6 @@ model = tf.keras.Sequential([
     tf.keras.layers.Flatten(),
     tf.keras.layers.Dense(12, activation='relu'),
     tf.keras.layers.Dense(10),
-    # tf.keras.layers.Softmax(),
 ])
 
 cb = UmlautCallback(
@@ -19,10 +18,8 @@ cb = UmlautCallback(
 )
 
 model.compile(
-    optimizer='adam',
-    # optimizer=tf.keras.optimizers.SGD(learning_rate=-1e5),
+    optimizer=tf.keras.optimizers.Adam(),
     loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-    # loss=tf.keras.losses.sparse_categorical_crossentropy,
     metrics=['accuracy'],
 )
 
@@ -30,9 +27,8 @@ model.compile(
 model.fit(
     train_images,
     train_labels,
-    epochs=15,
-    batch_size=256,
+    epochs=10,
+    batch_size=128,
     callbacks=[cb],
-    # validation_data=(train_images[:100], train_labels[:100])  # cross train/val data
     validation_split=0.2,  # add validation for val metrics
 )

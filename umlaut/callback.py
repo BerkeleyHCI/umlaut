@@ -53,6 +53,7 @@ class UmlautCallback(tf.keras.callbacks.Callback):
     def on_train_begin(self, logs=None):
         errors = run_pretrain_heuristics(self.model, self.source_module)
         if errors:
+            print(colored('Umlaut results:', 'magenta'))
             print(colored(errors, 'red'))
             if self.umlaut_client:
                 self.umlaut_client.send_errors(errors)
@@ -66,6 +67,7 @@ class UmlautCallback(tf.keras.callbacks.Callback):
         errors = run_epoch_heuristics(batch, self.model, logs, model_input, self.source_module)
         if errors:
             print()
+            print(colored('Umlaut results:', 'magenta'))
             print(colored(errors, 'red'))
             if self.umlaut_client:
                 self.umlaut_client.send_errors(errors)

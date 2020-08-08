@@ -57,6 +57,7 @@ def run_pretrain_heuristics(model, source_module):
     errors_raised.append(check_softmax_computed_before_loss(model, source_module))
     errors_raised.append(check_missing_activations(model, source_module))
     errors_raised.append(check_no_activation_last_layer(model, source_module))
+    errors_raised.append(check_dropout_p_less_than_half(model))
     errors_raised = list(filter(None, errors_raised))
     return errors_raised
 
@@ -183,7 +184,7 @@ def check_high_validation_acc(epoch, logs):
     remark = ''
     if val_acc > 0.95:
         remark += f'Epoch {epoch}: validation acuracy is very high ({100. * val_acc:.2f}%).\n'
-    if val_acc > train_acc:
+    if val_acc - train_acc > .05:  # val acc is 5% more than training acc
         remark += f'Epoch {epoch}: validation accuracy ({100 * val_acc:.2f}%) is higher than train accuracy ({100. * train_acc:.2f}%).'
     if remark:
         return umlaut.errors.OverconfidentValAccuracy(epoch, remark)
@@ -197,7 +198,7 @@ def check_missing_activations(model, source_module):
         layer_config = layer.get_config()
         if 'activation' in layer_config:
             if layer_config['activation'] == 'linear':
-                if i == len(model.layers) - 2 and model.layers[-1].name == 'softmax':
+                if i == len(model.layers) - 2 and isinstance(model.layers[-1], tf.keras.layers.Softmax()):
                     continue
                 err_layers.append((i, layer.name))
     if err_layers:
@@ -208,7 +209,7 @@ def check_missing_activations(model, source_module):
 
 def check_no_activation_last_layer(model, source_module):
     last_layer = model.layers[-1]
-    if model.layers[-1].name == 'softmax':
+    if isinstance(model.layers[-1], tf.keras.layers.Softmax):
         last_layer = model.layers[-2]
 
     layer_config = last_layer.get_config()
@@ -217,3 +218,14 @@ def check_no_activation_last_layer(model, source_module):
             remark = f'''Last layer in model {last_layer.name} has activation "{layer_config['activation']}"'''
             module_ref = get_model_construction_vscode_link(source_module)
             return umlaut.errors.FinalLayerHasActivationError(epochs=None, remarks=remark, module_url=module_ref)
+
+
+def check_dropout_p_less_than_half(model):
+    err_layers = []
+    for i, layer in enumerate(model.layers[:-1]):
+        if isinstance(layer, tf.keras.layers.Dropout):
+            if layer.rate > 0.5:
+                err_layers.append((i, layer.name, layer.rate))
+    if err_layers:
+        remarks = '\n'.join([f'Layer {l[0]} ({l[1]}) has dropout rate of {l[2]}' for l in err_layers])
+        return umlaut.errors.FinalLayerHasActivationError(epochs=None, remarks=remarks)

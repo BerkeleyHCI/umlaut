@@ -270,8 +270,9 @@ class OverfittingError(BaseErrorMessage):
     _so_query = {'q': '[keras] is:closed regularization'}
     _docs_url = 'https://www.tensorflow.org/api_docs/python/tf/keras/regularizers/Regularizer'
     _md_solution = [
-        'Try reducing the power of your model or adding regularization. You can reduce the power of your model by decreasing the `units` or `filters` parameters of `Dense` or `Conv2D` layers.',
-        'Regularization penalizes weights which are high in magnitude. You can try adding L2 or L1 regularization by using a [regularizer](https://www.tensorflow.org/api_docs/python/tf/keras/regularizers).'
+        'Try adding dropout or reducing the power of your model.',
+        'Dropout randomly omits weight updates during training (with some probability) which decreases model power and potentially increases robustness.'
+        'You can reduce the power of your model by decreasing the `units` or `filters` parameters of `Dense` or `Conv2D` layers.',
     ]
 
 
@@ -280,6 +281,23 @@ class FinalLayerHasActivationError(BaseErrorMessage):
     subtitle = 'The last layer of the model has a nonlinear activation function before Softmax. This can clip gradient updates and prevent the model from learning.'
     _md_solution = [
         'Remove the `activation` argument from the last layer of your model.'
+    ]
+
+    def get_annotations(self):
+        return None  # static check, no annotations
+
+    def __init__(self, epochs, remarks=None, module_url=None, *args, **kwargs):
+        # set epochs to None
+        self.epochs = None
+        self.remarks = remarks
+        self.module_url = module_url
+
+
+class FinalLayerHasActivationError(BaseErrorMessage):
+    title = 'Warning: High dropout rate'
+    subtitle = 'The dropout parameter of the indicated layer(s) is above 0.5, meaning less than half of the gradient updates will propagate through. This can prevent your model from learning.'
+    _md_solution = [
+        'Lower the dropout rate. Typical values range between \[0.2, 0.3\], extending to \[0.1, 0.5\].',
     ]
 
     def get_annotations(self):
