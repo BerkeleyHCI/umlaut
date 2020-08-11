@@ -10,26 +10,26 @@ model = tf.keras.Sequential([
     tf.keras.layers.Conv2D(64, 3, activation='linear'),
     tf.keras.layers.Conv2D(64, 3, activation='linear'),
     tf.keras.layers.MaxPool2D(2),
-    tf.keras.layers.Dropout(0.8),
+    tf.keras.layers.Dropout(0.2),
     tf.keras.layers.Conv2D(128, 3, activation='linear'),
     tf.keras.layers.Conv2D(128, 3, activation='linear'),
     tf.keras.layers.MaxPool2D(2),
-    tf.keras.layers.Dropout(0.8),
+    tf.keras.layers.Dropout(0.2),
     tf.keras.layers.Flatten(),
     tf.keras.layers.Dense(128),
     tf.keras.layers.Dense(128),
-    tf.keras.layers.Dropout(0.8),
+    tf.keras.layers.Dropout(0.2),
     tf.keras.layers.Dense(10),
 ])
 
 cb = UmlautCallback(
     model,
-    session_name='pilot_2',
+    session_name='eb',
     # offline=True,
 )
 
 model.compile(
-    optimizer=tf.keras.optimizers.Adam(learning_rate=-1e5),
+    optimizer=tf.keras.optimizers.Adam(learning_rate=-1e3),
     loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=['accuracy'],
 )
@@ -41,7 +41,7 @@ model.fit(
     epochs=10,
     batch_size=128,
     callbacks=[cb],
-    validation_split=0.2,  # add validation for val metrics
+    validation_data=(train_images[:100], train_labels[:100])
 )
 
 results = model.evaluate(test_images, test_labels, batch_size=4096)

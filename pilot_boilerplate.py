@@ -8,21 +8,21 @@ model = tf.keras.Sequential([
     tf.keras.layers.Conv2D(64, 3, activation='relu'),
     tf.keras.layers.Conv2D(64, 3, activation='relu'),
     tf.keras.layers.MaxPool2D(2),
-    tf.keras.layers.Dropout(0.2),
+    tf.keras.layers.Dropout(0.8),
     tf.keras.layers.Conv2D(128, 3, activation='relu'),
     tf.keras.layers.Conv2D(128, 3, activation='relu'),
     tf.keras.layers.MaxPool2D(2),
-    tf.keras.layers.Dropout(0.2),
+    tf.keras.layers.Dropout(0.8),
     tf.keras.layers.Flatten(),
     tf.keras.layers.Dense(128, activation='relu'),
     tf.keras.layers.Dense(128, activation='relu'),
-    tf.keras.layers.Dropout(0.2),
+    tf.keras.layers.Dropout(0.8),
     tf.keras.layers.Dense(10),
 ])
 
 cb = UmlautCallback(
     model,
-    session_name='pilot',
+    session_name='ea',
     # offline=True,
 )
 
@@ -39,7 +39,7 @@ model.fit(
     epochs=10,
     batch_size=128,
     callbacks=[cb],
-    validation_data=(train_images[:100], train_labels[:100])
+    validation_split=0.2,
 )
 
 results = model.evaluate(test_images, test_labels, batch_size=4096)
