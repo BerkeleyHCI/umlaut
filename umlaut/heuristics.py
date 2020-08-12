@@ -147,7 +147,8 @@ def check_softmax_computed_before_loss(model, source_module):
     if issubclass(type(model.loss), tf.keras.losses.Loss):
         # get from_logits arg from Loss class family
         from_logits = model.loss._fn_kwargs.get('from_logits', False)
-    last_layer_is_softmax = isinstance(model.layers[-1], tf.keras.layers.Softmax)
+    last_layer_is_softmax = 'softmax' in model.layers[-1].name
+    # last_layer_is_softmax = isinstance(model.layers[-1], tf.keras.layers.Softmax)
     if not last_layer_is_softmax and not from_logits:
         module_ref = get_model_construction_vscode_link(source_module)
         return umlaut.errors.NoSoftmaxActivationError(None, module_url=module_ref)
@@ -198,7 +199,7 @@ def check_missing_activations(model, source_module):
         layer_config = layer.get_config()
         if 'activation' in layer_config:
             if layer_config['activation'] == 'linear':
-                if i == len(model.layers) - 2 and isinstance(model.layers[-1], tf.keras.layers.Softmax()):
+                if i == len(model.layers) - 2 and 'softmax' in model.layers[-1].name:
                     continue
                 err_layers.append((i, layer.name))
     if err_layers:
@@ -209,7 +210,7 @@ def check_missing_activations(model, source_module):
 
 def check_no_activation_last_layer(model, source_module):
     last_layer = model.layers[-1]
-    if isinstance(model.layers[-1], tf.keras.layers.Softmax):
+    if 'softmax' in last_layer.name:
         last_layer = model.layers[-2]
 
     layer_config = last_layer.get_config()
