@@ -27,7 +27,7 @@ cb = UmlautCallback(
 )
 
 model.compile(
-    optimizer='adam',
+    optimizer=tf.keras.optimizers.Adam(),
     loss=tf.keras.losses.sparse_categorical_crossentropy,
     metrics=['accuracy'],
 )
