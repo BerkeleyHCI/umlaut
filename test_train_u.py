@@ -32,3 +32,6 @@ model.fit(
     callbacks=[cb],
     validation_split=0.2,
 )
+
+results = model.evaluate(test_images, test_labels, batch_size=4096)
+print('test loss, test acc: ', results)
