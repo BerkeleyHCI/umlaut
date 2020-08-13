@@ -1,5 +1,4 @@
 import tensorflow as tf
-from umlaut import UmlautCallback
 
 (train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.fashion_mnist.load_data()
 train_images = train_images / 255.
