@@ -210,6 +210,8 @@ def check_missing_activations(model, source_module):
 
 def check_no_activation_last_layer(model, source_module):
     last_layer = model.layers[-1]
+    layer_config = last_layer.get_config()
+    
     if 'softmax' in last_layer.name:
         last_layer = model.layers[-2]
 
@@ -229,4 +231,4 @@ def check_dropout_p_less_than_half(model):
                 err_layers.append((i, layer.name, layer.rate))
     if err_layers:
         remarks = '\n'.join([f'Layer {l[0]} ({l[1]}) has dropout rate of {l[2]}' for l in err_layers])
-        return umlaut.errors.FinalLayerHasActivationError(epochs=None, remarks=remarks)
+        return umlaut.errors.HighDropoutError(epochs=None, remarks=remarks)

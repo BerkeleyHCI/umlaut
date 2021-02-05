@@ -133,3 +133,9 @@ dmypy.json
 
 # Windows stuff
 *.lnk
+
+# user study info
+user_eval
+
+# editor settings
+.vscode

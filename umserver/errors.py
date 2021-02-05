@@ -293,7 +293,7 @@ class FinalLayerHasActivationError(BaseErrorMessage):
         self.module_url = module_url
 
 
-class FinalLayerHasActivationError(BaseErrorMessage):
+class HighDropoutError(BaseErrorMessage):
     title = 'Warning: High dropout rate'
     subtitle = 'The dropout parameter of the indicated layer(s) is above 0.5, meaning less than half of the gradient updates will propagate through. This can prevent your model from learning.'
     _md_solution = [
@@ -322,6 +322,7 @@ ERROR_KEYS = {
     'overconfident_val': OverconfidentValAccuracy,
     'missing_activations': MissingActivationError,
     'activation_final_layer': FinalLayerHasActivationError,
+    'high_dropout_rate': HighDropoutError,
 }
 
 # assign id strings to error messages as a backref
